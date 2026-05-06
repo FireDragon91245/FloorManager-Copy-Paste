@@ -1,0 +1,85 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <TargetFramework>net6.0</TargetFramework>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <LangVersion>latest</LangVersion>
+    <AssemblyName>DataCenterLaptopButtonMod</AssemblyName>
+    <RootNamespace>DataCenterLaptopButtonMod</RootNamespace>
+    <GameDir>D:\SteamLibrary\steamapps\common\Data Center</GameDir>
+    <MelonLoaderRefDir>$(MSBuildThisFileDirectory)..\MelonLoader_x64\MelonLoader\net6</MelonLoaderRefDir>
+    <Il2CppAssembliesDir>$(GameDir)\MelonLoader\Il2CppAssemblies</Il2CppAssembliesDir>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="MelonLoader">
+      <HintPath>$(MelonLoaderRefDir)\MelonLoader.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="0Harmony">
+      <HintPath>$(MelonLoaderRefDir)\0Harmony.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Il2CppInterop.Common">
+      <HintPath>$(MelonLoaderRefDir)\Il2CppInterop.Common.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Il2CppInterop.Runtime">
+      <HintPath>$(MelonLoaderRefDir)\Il2CppInterop.Runtime.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Il2CppInterop.HarmonySupport">
+      <HintPath>$(MelonLoaderRefDir)\Il2CppInterop.HarmonySupport.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Assembly-CSharp">
+      <HintPath>$(Il2CppAssembliesDir)\Assembly-CSharp.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Il2Cppmscorlib">
+      <HintPath>$(Il2CppAssembliesDir)\Il2Cppmscorlib.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Unity.TextMeshPro">
+      <HintPath>$(Il2CppAssembliesDir)\Unity.TextMeshPro.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.CoreModule">
+      <HintPath>$(Il2CppAssembliesDir)\UnityEngine.CoreModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.TextRenderingModule">
+      <HintPath>$(Il2CppAssembliesDir)\UnityEngine.TextRenderingModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.UI">
+      <HintPath>$(Il2CppAssembliesDir)\UnityEngine.UI.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.UIModule">
+      <HintPath>$(Il2CppAssembliesDir)\UnityEngine.UIModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityEngine.InputLegacyModule">
+      <HintPath>$(Il2CppAssembliesDir)\UnityEngine.InputLegacyModule.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Unity.InputSystem">
+      <HintPath>$(Il2CppAssembliesDir)\Unity.InputSystem.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Unity.Entities">
+      <HintPath>$(Il2CppAssembliesDir)\Unity.Entities.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <Target Name="CopyModToGame" AfterTargets="Build">
+    <MakeDir Directories="$(GameDir)\Mods" />
+    <Copy SourceFiles="$(TargetDir)$(AssemblyName).dll" DestinationFolder="$(GameDir)\Mods" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(TargetDir)$(AssemblyName).pdb" DestinationFolder="$(GameDir)\Mods" SkipUnchangedFiles="true" Condition="Exists('$(TargetDir)$(AssemblyName).pdb')" />
+  </Target>
+
+</Project>
