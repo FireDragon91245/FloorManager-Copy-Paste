@@ -4,7 +4,7 @@ using MelonLoader;
 using HarmonyLib;
 using UnityEngine;
 
-[assembly: MelonInfo(typeof(DataCenterLaptopButtonMod.LaptopButtonMod), "Data Center Laptop Button Mod", "0.2.4", "GitHub Copilot")]
+[assembly: MelonInfo(typeof(DataCenterLaptopButtonMod.LaptopButtonMod), "Data Center Laptop Button Mod", "0.2.5", "GitHub Copilot")]
 [assembly: MelonGame("Waseku", "Data Center")]
 [assembly: MelonOptionalDependencies("UnityEngine.CoreModule", "UnityEngine.UIModule", "UnityEngine.UI", "UnityEngine.TextRenderingModule", "Unity.TextMeshPro")]
 

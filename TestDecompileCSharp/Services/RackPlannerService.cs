@@ -547,6 +547,43 @@ internal static class RackPlannerService
     private static int ResolveAnchorArrayIndex(Rack rack, int bottomPhysicalSlot, int sizeInU)
         => PhysicalToArrayIndex(rack, ResolveAnchorPhysicalSlot(bottomPhysicalSlot, sizeInU));
 
+    /// <summary>
+    /// Resolve the physically lowest occupied slot for a mounted device from the
+    /// vanilla rack owner bitmap. <c>Rack.isPositionUsed[]</c> stores the owning
+    /// RackPosition UID in each occupied slot, not a boolean. This is more reliable
+    /// for Floor Plan/template capture than guessing from <c>currentRackPosition</c>.
+    /// </summary>
+    private static int ResolveBottomPhysicalSlotFromOwnerBitmap(Rack rack, RackPosition rackPosition, int sizeInU)
+    {
+        if (rack == null || rackPosition == null || rack.positions == null || rack.isPositionUsed == null)
+            return -1;
+
+        var ownerUid = rackPosition.rackPosGlobalUID;
+        if (ownerUid <= 0) return -1;
+
+        var minPhysical = int.MaxValue;
+        var matched = 0;
+        var count = Math.Min(rack.positions.Count, rack.isPositionUsed.Count);
+        for (var arrayIndex = 0; arrayIndex < count; arrayIndex++)
+        {
+            int owner;
+            try { owner = rack.isPositionUsed[arrayIndex]; } catch { continue; }
+            if (owner != ownerUid) continue;
+
+            var pos = rack.positions[arrayIndex];
+            var physical = ResolveSlotIndex(rack, pos);
+            if (physical < 0) continue;
+
+            minPhysical = Math.Min(minPhysical, physical);
+            matched++;
+        }
+
+        if (matched <= 0) return -1;
+        if (matched != Math.Max(1, sizeInU))
+            VerboseLog($"[RackPlanner][CAPTURE-SLOT] ownerUID={ownerUid} bitmapMatched={matched} sizeU={sizeInU}; using minPhysical={minPhysical}");
+        return minPhysical == int.MaxValue ? -1 : minPhysical;
+    }
+
     private static bool TryBuildDeviceTemplate(UsableObject usableObject, out RackDeviceTemplate template, out Server server, out NetworkSwitch sw, out PatchPanel patch)
     {
         template = null;
@@ -558,7 +595,8 @@ internal static class RackPlannerService
         var anchorIndex = ResolveSlotIndex(rackPos?.rack, rackPos);
         if (anchorIndex < 0) return false;
         var sizeInU = Math.Max(1, usableObject.sizeInU);
-        var startIndex = Math.Max(0, anchorIndex - sizeInU + 1);
+        var bitmapStartIndex = ResolveBottomPhysicalSlotFromOwnerBitmap(rackPos?.rack, rackPos, sizeInU);
+        var startIndex = bitmapStartIndex >= 0 ? bitmapStartIndex : Math.Max(0, anchorIndex - sizeInU + 1);
         var label = usableObject.labelText ?? string.Empty;
         var shopItem = usableObject.shopItemSO;
         var displayName = shopItem?.itemName ?? usableObject.gameObject.name;
@@ -575,7 +613,7 @@ internal static class RackPlannerService
         var localEuler = rackTr != null
             ? Vec3.From((Quaternion.Inverse(rackTr.rotation) * usableObject.transform.rotation).eulerAngles)
             : default;
-        VerboseLog($"[RackPlanner][CAPTURE] dev kind={(usableObject.GetComponent<Server>()!=null?"Server":usableObject.GetComponent<NetworkSwitch>()!=null?"NetworkSwitch":"PatchPanel")} sizeU={sizeInU} bottomPhysSlot={startIndex} anchorPhysSlot={anchorIndex} localPos={localPos.ToUnity()} localEuler={localEuler.ToUnity()} slotLocal={(rackTr!=null?rackTr.InverseTransformPoint(rackPos.transform.position):Vector3.zero)}");
+        VerboseLog($"[RackPlanner][CAPTURE] dev kind={(usableObject.GetComponent<Server>()!=null?"Server":usableObject.GetComponent<NetworkSwitch>()!=null?"NetworkSwitch":"PatchPanel")} sizeU={sizeInU} bottomPhysSlot={startIndex} anchorPhysSlot={anchorIndex} bitmapBottomPhysSlot={bitmapStartIndex} localPos={localPos.ToUnity()} localEuler={localEuler.ToUnity()} slotLocal={(rackTr!=null?rackTr.InverseTransformPoint(rackPos.transform.position):Vector3.zero)}");
 
         server = usableObject.GetComponent<Server>();
         if (server != null)
@@ -2242,6 +2280,7 @@ internal static class RackPlannerService
             DisplayName = source.DisplayName,
             Label = source.Label,
             IsPoweredOn = source.IsPoweredOn,
+            ServerType = source.ServerType,
             LocalPos = source.LocalPos,
             LocalEuler = source.LocalEuler
         };
