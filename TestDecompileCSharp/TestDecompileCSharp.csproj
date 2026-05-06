@@ -8,10 +8,19 @@
     <LangVersion>latest</LangVersion>
     <AssemblyName>FloorManagerCopyPaste</AssemblyName>
     <RootNamespace>FloorManagerCopyPaste</RootNamespace>
-    <GameDir>D:\SteamLibrary\steamapps\common\Data Center</GameDir>
-    <MelonLoaderRefDir>$(MSBuildThisFileDirectory)..\MelonLoader_x64\MelonLoader\net6</MelonLoaderRefDir>
-    <Il2CppAssembliesDir>$(GameDir)\MelonLoader\Il2CppAssemblies</Il2CppAssembliesDir>
+    <RepoRoot>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)..\'))</RepoRoot>
+    <MelonLoaderRefDir Condition="'$(MelonLoaderRefDir)' == ''">$(RepoRoot)MelonLoader_x64\MelonLoader\net6</MelonLoaderRefDir>
+    <Il2CppAssembliesDir Condition="'$(Il2CppAssembliesDir)' == '' and '$(GameDir)' != ''">$(GameDir)\MelonLoader\Il2CppAssemblies</Il2CppAssembliesDir>
+    <CopyModToGame Condition="'$(CopyModToGame)' == ''">true</CopyModToGame>
+    <CopyModToGameNormalized>$([System.String]::Copy('$(CopyModToGame)').ToLowerInvariant())</CopyModToGameNormalized>
   </PropertyGroup>
+
+  <Target Name="ValidateDevPaths" BeforeTargets="ResolveReferences">
+    <Error Condition="!Exists('$(MelonLoaderRefDir)\MelonLoader.dll')"
+           Text="MelonLoader refs not found. Set MelonLoaderRefDir in Directory.Build.props.user or keep the extracted MelonLoader files in $(RepoRoot)MelonLoader_x64\MelonLoader\net6." />
+    <Error Condition="'$(Il2CppAssembliesDir)' == '' or !Exists('$(Il2CppAssembliesDir)\Assembly-CSharp.dll')"
+           Text="Il2Cpp assemblies not found. Launch the game once with MelonLoader installed, then set GameDir or Il2CppAssembliesDir in Directory.Build.props.user." />
+  </Target>
 
   <ItemGroup>
     <Reference Include="MelonLoader">
@@ -76,7 +85,7 @@
     </Reference>
   </ItemGroup>
 
-  <Target Name="CopyModToGame" AfterTargets="Build">
+  <Target Name="CopyBuiltModToGame" AfterTargets="Build" Condition="'$(CopyModToGameNormalized)' == 'true' and '$(GameDir)' != ''">
     <MakeDir Directories="$(GameDir)\Mods" />
     <Copy SourceFiles="$(TargetDir)$(AssemblyName).dll" DestinationFolder="$(GameDir)\Mods" SkipUnchangedFiles="true" />
     <Copy SourceFiles="$(TargetDir)$(AssemblyName).pdb" DestinationFolder="$(GameDir)\Mods" SkipUnchangedFiles="true" Condition="Exists('$(TargetDir)$(AssemblyName).pdb')" />

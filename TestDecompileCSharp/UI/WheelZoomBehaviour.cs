@@ -38,7 +38,7 @@ internal sealed class WheelZoomBehaviour : MonoBehaviour
     {
         if (_registered) return;
         try { ClassInjector.RegisterTypeInIl2Cpp<WheelZoomBehaviour>(); }
-        catch (Exception ex) { MelonLoader.MelonLogger.Warning($"[RackPlanner] WheelZoomBehaviour register failed: {ex.Message}"); }
+        catch (Exception ex) { MelonLoader.MelonLogger.Warning($"WheelZoomBehaviour register failed: {ex.Message}"); }
         _registered = true;
     }
 
@@ -72,7 +72,7 @@ internal sealed class WheelZoomBehaviour : MonoBehaviour
         }
         catch (Exception ex)
         {
-            MelonLoader.MelonLogger.Warning($"[RackPlanner] WheelZoom Update error: {ex.Message}");
+            MelonLoader.MelonLogger.Warning($"WheelZoom Update error: {ex.Message}");
         }
     }
 }

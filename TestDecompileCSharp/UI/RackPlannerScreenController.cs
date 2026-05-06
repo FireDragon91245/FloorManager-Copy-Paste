@@ -27,7 +27,6 @@ internal sealed class RackPlannerScreenController
     private RackRuntimeInfo _planRacksSelectedRack;
     private int _planTemplateIndex = -1;
     private int _vtSelectedIndex = -1;
-    private Page _currentPage = Page.Main;
     private float _fpZoom = 1f;
     private float _prZoom = 1f;
     private const float MinZoom = 0.5f;
@@ -40,7 +39,7 @@ internal sealed class RackPlannerScreenController
     private GameObject _fpFloorContent, _fpSidebarContent;
     private TextMeshProUGUI _fpHeader, _fpStatus;
 
-    private GameObject _prFloorContent, _prSidebarContent;
+    private GameObject _prFloorContent;
     private TextMeshProUGUI _prHeader, _prStatus, _prTemplateLabel;
 
     private GameObject _vtListContent, _vtPreviewContent;
@@ -120,7 +119,6 @@ internal sealed class RackPlannerScreenController
         // triggered the navigation.
         ClearSelectionAndHighlight();
 
-        _currentPage = page;
         if (_mainPage != null) _mainPage.SetActive(page == Page.Main);
         if (_floorPlanPage != null) _floorPlanPage.SetActive(page == Page.FloorPlan);
         if (_planRacksPage != null) _planRacksPage.SetActive(page == Page.PlanRacks);
@@ -202,17 +200,17 @@ internal sealed class RackPlannerScreenController
 
         var title = BuildLabel(col.transform, "Floor Manager: Copy & Paste", 38f, TextAlignmentOptions.Center, Color.white);
         SetPreferredHeight(title.gameObject, 56f);
-        var sub = BuildLabel(col.transform, "Werkzeuge zum Kopieren, Einfügen und Verwalten von Rack-Layouts", 16f, TextAlignmentOptions.Center, new Color(0.78f, 0.86f, 0.96f, 1f));
+        var sub = BuildLabel(col.transform, "Tools for copying, pasting, and managing rack layouts", 16f, TextAlignmentOptions.Center, new Color(0.78f, 0.86f, 0.96f, 1f));
         SetPreferredHeight(sub.gameObject, 24f);
 
-        BuildBigButton(col.transform, "Floor Plan", "Bestehende Racks ansehen, kopieren oder als Vorlage speichern",
+        BuildBigButton(col.transform, "Floor Plan", "View existing racks, copy them, or save them as templates",
             new Color(0.18f, 0.55f, 0.86f, 1f), () => ShowPage(Page.FloorPlan));
-        BuildBigButton(col.transform, "Plan Racks", "Leere Racks bestücken oder neue Racks kaufen",
+        BuildBigButton(col.transform, "Plan Racks", "Populate empty racks or buy new racks",
             new Color(0.86f, 0.55f, 0.18f, 1f), () => ShowPage(Page.PlanRacks));
-        BuildBigButton(col.transform, "View Templates", "Gespeicherte Vorlagen mit Vorschau & Preisschätzung",
+        BuildBigButton(col.transform, "View Templates", "Browse saved templates with preview and price estimate",
             new Color(0.45f, 0.32f, 0.78f, 1f), () => ShowPage(Page.ViewTemplates));
 
-        BuildBigButton(col.transform, "Schließen", "Zurück zum Laptop-Hauptscreen",
+        BuildBigButton(col.transform, "Close", "Return to the laptop main screen",
             new Color(0.32f, 0.34f, 0.40f, 1f), () => Close(FloorManagerCopyPasteMod.MainScreen));
 
         return page;
@@ -279,38 +277,38 @@ internal sealed class RackPlannerScreenController
 
         BuildButton(btnRow.transform, "Copy", () =>
         {
-            if (_floorPlanSelectedRack == null) { _fpStatus.text = "Kein Rack gewählt."; return; }
+            if (_floorPlanSelectedRack == null) { _fpStatus.text = "No rack selected."; return; }
             RackPlannerService.Clipboard = RackPlannerService.CaptureRackTemplate(_floorPlanSelectedRack, "clipboard");
-            _fpStatus.text = $"Clipboard: {RackPlannerService.Clipboard.Devices.Count} Geräte, {RackPlannerService.Clipboard.Cables.Count} Kabel.";
+            _fpStatus.text = $"Clipboard: {RackPlannerService.Clipboard.Devices.Count} devices, {RackPlannerService.Clipboard.Cables.Count} cables.";
         }, 0f);
 
         BuildButton(btnRow.transform, "Create Template", () =>
         {
             try
             {
-                if (_floorPlanSelectedRack == null) { _fpStatus.text = "Kein Rack gewählt."; return; }
+                if (_floorPlanSelectedRack == null) { _fpStatus.text = "No rack selected."; return; }
                 var rackToCapture = _floorPlanSelectedRack;
-                OpenModal($"Vorlagenname für {rackToCapture.Label}:", $"{rackToCapture.Label}_{DateTime.Now:HHmmss}", name =>
+                OpenModal($"Template name for {rackToCapture.Label}:", $"{rackToCapture.Label}_{DateTime.Now:HHmmss}", name =>
                 {
                     try
                     {
-                        if (string.IsNullOrWhiteSpace(name)) { _fpStatus.text = "Vorlagenname leer."; return; }
+                        if (string.IsNullOrWhiteSpace(name)) { _fpStatus.text = "Template name is empty."; return; }
                         var t = RackPlannerService.CaptureRackTemplate(rackToCapture, name);
                         _templates.Insert(0, t);
                         RackPlannerService.SaveTemplates(_templates);
-                        _fpStatus.text = $"Vorlage gespeichert: {t.Name} ({t.Devices.Count} Geräte, {t.Cables.Count} Kabel).";
+                        _fpStatus.text = $"Template saved: {t.Name} ({t.Devices.Count} devices, {t.Cables.Count} cables).";
                     }
                     catch (Exception ex)
                     {
-                        _fpStatus.text = $"Vorlage speichern fehlgeschlagen: {ex.Message}";
-                        MelonLoader.MelonLogger.Error($"[RackPlanner] Create Template (save) failed: {ex}");
+                        _fpStatus.text = $"Failed to save template: {ex.Message}";
+                        MelonLoader.MelonLogger.Error($"Create Template (save) failed: {ex}");
                     }
                 });
             }
             catch (Exception ex)
             {
-                _fpStatus.text = $"Create Template Fehler: {ex.Message}";
-                MelonLoader.MelonLogger.Error($"[RackPlanner] Create Template failed: {ex}");
+                _fpStatus.text = $"Create Template error: {ex.Message}";
+                MelonLoader.MelonLogger.Error($"Create Template failed: {ex}");
             }
         }, 0f);
 
@@ -332,7 +330,7 @@ internal sealed class RackPlannerScreenController
         RenderFloorMap(_fpFloorContent, _racks, r => { _floorPlanSelectedRack = r; RefreshFloorPlan(); }, _floorPlanSelectedRack, _fpZoom);
         RenderRackComponentSidebar(_fpSidebarContent, _floorPlanSelectedRack);
         if (string.IsNullOrEmpty(_fpStatus.text))
-            _fpStatus.text = _floorPlanSelectedRack == null ? "Keine Racks gefunden." : $"Ausgewählt: {_floorPlanSelectedRack.Label}";
+            _fpStatus.text = _floorPlanSelectedRack == null ? "No racks found." : $"Selected: {_floorPlanSelectedRack.Label}";
     }
 
     // ============================================================================
@@ -353,7 +351,7 @@ internal sealed class RackPlannerScreenController
         var sbInner = BuildContainer(sidebar.transform, -1f);
         SetFlexibleHeight(sbInner, 1f);
 
-        _prTemplateLabel = BuildLabel(sbInner.transform, "Vorlage: –", 14f, TextAlignmentOptions.Left, new Color(0.85f, 0.92f, 1f, 1f));
+        _prTemplateLabel = BuildLabel(sbInner.transform, "Template: –", 14f, TextAlignmentOptions.Left, new Color(0.85f, 0.92f, 1f, 1f));
         SetPreferredHeight(_prTemplateLabel.gameObject, 22f);
 
         var pickRow = CreateUiObject("PickRow", sbInner.transform);
@@ -373,12 +371,12 @@ internal sealed class RackPlannerScreenController
         BuildButton(actions.transform, "Paste Template", () =>
         {
             var t = GetSelectedPlanTemplate();
-            if (t == null) { _prStatus.text = "Keine Vorlage gewählt."; return; }
-            ApplyToSelectedTarget(t, $"Vorlage {t.Name}");
+            if (t == null) { _prStatus.text = "No template selected."; return; }
+            ApplyToSelectedTarget(t, $"Template {t.Name}");
         }, 0f);
         BuildButton(actions.transform, "Paste from Clipboard", () =>
         {
-            if (RackPlannerService.Clipboard == null) { _prStatus.text = "Clipboard ist leer."; return; }
+            if (RackPlannerService.Clipboard == null) { _prStatus.text = "Clipboard is empty."; return; }
             ApplyToSelectedTarget(RackPlannerService.Clipboard, "Clipboard");
         }, 0f);
         BuildButton(actions.transform, "Buy New Rack (here)", () =>
@@ -387,10 +385,10 @@ internal sealed class RackPlannerScreenController
             if (RackPlannerService.TryBuyAndPlaceRack(pos, out var msg))
                 _prStatus.text = msg;
             else
-                _prStatus.text = "Kauf fehlgeschlagen: " + msg;
+                _prStatus.text = "Purchase failed: " + msg;
             RefreshPlanRacks();
         }, 0f);
-        BuildButton(actions.transform, "Aktualisieren", () => RefreshPlanRacks(), 0f);
+        BuildButton(actions.transform, "Refresh", () => RefreshPlanRacks(), 0f);
 
         AddBackButton(page.transform, _prHeader.transform.parent);
         AddZoomButtons(_prHeader.transform.parent, () => _prZoom, v => { _prZoom = v; RefreshPlanRacks(); });
@@ -409,9 +407,9 @@ internal sealed class RackPlannerScreenController
 
     private void ApplyToSelectedTarget(RackTemplate template, string description)
     {
-        if (_planRacksSelectedRack == null) { _prStatus.text = "Kein Ziel-Rack gewählt."; return; }
+        if (_planRacksSelectedRack == null) { _prStatus.text = "No target rack selected."; return; }
         var result = RackPlannerService.ApplyTemplate(template, _planRacksSelectedRack);
-        _prStatus.text = $"{description}: {result.SpawnedCount} Geräte, {result.CablesCreated} Kabel, Kosten {result.ChargedAmount}.\n"
+        _prStatus.text = $"{description}: {result.SpawnedCount} devices, {result.CablesCreated} cables, cost {result.ChargedAmount}.\n"
                        + string.Join("\n", result.Messages.Take(4));
         RefreshPlanRacks();
     }
@@ -419,7 +417,7 @@ internal sealed class RackPlannerScreenController
     private void RefreshPlanRacks()
     {
         RefreshAll();
-        _prHeader.text = "Plan Racks  ·  Belegte Racks rot markiert";
+        _prHeader.text = "Plan Racks  ·  Occupied racks highlighted in red";
 
         // Show ALL racks so users can see the full floor – but flag every rack with
         // any installed device as "invalid paste target" so they can't accidentally
@@ -436,7 +434,7 @@ internal sealed class RackPlannerScreenController
             {
                 if (IsOccupied(r))
                 {
-                    _prStatus.text = $"{r.Label} ist belegt – kein gültiges Paste-Ziel.";
+                    _prStatus.text = $"{r.Label} is occupied – not a valid paste target.";
                     return;
                 }
                 _planRacksSelectedRack = r;
@@ -449,8 +447,8 @@ internal sealed class RackPlannerScreenController
         var t = GetSelectedPlanTemplate();
         var clip = RackPlannerService.Clipboard;
         _prTemplateLabel.text = t == null
-            ? (clip == null ? "Vorlage: – (Clipboard leer)" : $"Clipboard bereit · {clip.Devices.Count} Geräte")
-            : $"Vorlage: {t.Name} · {t.Devices.Count} Geräte / {t.Cables.Count} Kabel";
+            ? (clip == null ? "Template: – (clipboard empty)" : $"Clipboard ready · {clip.Devices.Count} devices")
+            : $"Template: {t.Name} · {t.Devices.Count} devices / {t.Cables.Count} cables";
 
         // Sidebar shows the *target* rack contents (likely empty) for confirmation
         // Plus, when a template is selected, also a price estimate.
@@ -478,13 +476,13 @@ internal sealed class RackPlannerScreenController
         var rl = rowBtns.AddComponent<HorizontalLayoutGroup>();
         rl.spacing = 4f; rl.childControlWidth = true; rl.childForceExpandWidth = true; rl.childControlHeight = true; rl.childForceExpandHeight = true;
         SetPreferredHeight(rowBtns, 34f);
-        BuildButton(rowBtns.transform, "Aktualisieren", () => RefreshViewTemplates(), 0f);
-        BuildButton(rowBtns.transform, "Löschen", () =>
+        BuildButton(rowBtns.transform, "Refresh", () => RefreshViewTemplates(), 0f);
+        BuildButton(rowBtns.transform, "Delete", () =>
         {
-            if (_vtSelectedIndex < 0 || _vtSelectedIndex >= _templates.Count) { _vtStatus.text = "Keine Vorlage gewählt."; return; }
+            if (_vtSelectedIndex < 0 || _vtSelectedIndex >= _templates.Count) { _vtStatus.text = "No template selected."; return; }
             var name = _templates[_vtSelectedIndex].Name;
             RackPlannerService.DeleteTemplate(_templates, _vtSelectedIndex);
-            _vtStatus.text = $"Vorlage gelöscht: {name}";
+            _vtStatus.text = $"Template deleted: {name}";
             _vtSelectedIndex = Math.Min(_vtSelectedIndex, _templates.Count - 1);
             RefreshViewTemplates();
         }, 0f);
@@ -506,12 +504,12 @@ internal sealed class RackPlannerScreenController
     private void RefreshViewTemplates()
     {
         RefreshAll();
-        _vtHeader.text = $"View Templates  ·  {_templates.Count} gespeichert";
+        _vtHeader.text = $"View Templates  ·  {_templates.Count} saved";
 
         ClearChildren(_vtListContent.transform);
         if (_templates.Count == 0)
         {
-            BuildLabel(_vtListContent.transform, "Keine Vorlagen vorhanden.", 14f, TextAlignmentOptions.Center, new Color(0.85f, 0.9f, 1f, 1f));
+            BuildLabel(_vtListContent.transform, "No templates available.", 14f, TextAlignmentOptions.Center, new Color(0.85f, 0.9f, 1f, 1f));
         }
         else
         {
@@ -537,7 +535,7 @@ internal sealed class RackPlannerScreenController
 
                 var n = BuildLabel(row.transform, t.Name, 14f, TextAlignmentOptions.TopLeft, Color.white);
                 Stretch(n.rectTransform, new Vector2(8f, 26f), new Vector2(-8f, -4f));
-                var sub = BuildLabel(row.transform, $"{t.Devices.Count} Geräte · {t.Cables.Count} Kabel", 11f, TextAlignmentOptions.BottomLeft, new Color(0.78f, 0.86f, 0.98f, 1f));
+                var sub = BuildLabel(row.transform, $"{t.Devices.Count} devices · {t.Cables.Count} cables", 11f, TextAlignmentOptions.BottomLeft, new Color(0.78f, 0.86f, 0.98f, 1f));
                 Stretch(sub.rectTransform, new Vector2(8f, 4f), new Vector2(-8f, -28f));
             }
         }
@@ -559,7 +557,7 @@ internal sealed class RackPlannerScreenController
 
         if (racks == null || racks.Count == 0)
         {
-            BuildLabel(content.transform, "Keine Racks gefunden.", 18f, TextAlignmentOptions.Center, Color.white);
+            BuildLabel(content.transform, "No racks found.", 18f, TextAlignmentOptions.Center, Color.white);
             contentRect.sizeDelta = new Vector2(600f, 180f);
             return;
         }
@@ -780,13 +778,13 @@ internal sealed class RackPlannerScreenController
         ClearChildren(content.transform);
         if (rack == null)
         {
-            BuildLabel(content.transform, "Kein Rack gewählt.", 14f, TextAlignmentOptions.Center, new Color(0.85f, 0.9f, 1f, 1f));
+            BuildLabel(content.transform, "No rack selected.", 14f, TextAlignmentOptions.Center, new Color(0.85f, 0.9f, 1f, 1f));
             return;
         }
 
         BuildSectionTitle(content.transform, rack.Label);
-        BuildLabel(content.transform, $"Belegung: {rack.UsedSlots}/{rack.TotalSlots} U", 13f, TextAlignmentOptions.Left, new Color(0.85f, 0.9f, 1f, 1f));
-        BuildLabel(content.transform, $"Geräte: {rack.Devices.Count}", 13f, TextAlignmentOptions.Left, Color.white);
+        BuildLabel(content.transform, $"Occupancy: {rack.UsedSlots}/{rack.TotalSlots} U", 13f, TextAlignmentOptions.Left, new Color(0.85f, 0.9f, 1f, 1f));
+        BuildLabel(content.transform, $"Devices: {rack.Devices.Count}", 13f, TextAlignmentOptions.Left, Color.white);
         BuildDivider(content.transform);
 
         if (rack.TotalSlots <= 0) return;
@@ -808,7 +806,7 @@ internal sealed class RackPlannerScreenController
             Color color;
             if (d == null)
             {
-                text = $"U{slot + 1:00}  frei";
+                text = $"U{slot + 1:00}  empty";
                 color = new Color(0.16f, 0.20f, 0.25f, 0.85f);
             }
             else
@@ -817,7 +815,7 @@ internal sealed class RackPlannerScreenController
                 var top = d.StartIndex + size - 1;
                 var name = top == slot
                     ? $"{d.DisplayName}{(string.IsNullOrWhiteSpace(d.Label) ? string.Empty : $" [{d.Label}]")}"
-                    : "belegt";
+                    : "occupied";
                 text = $"U{slot + 1:00}  {ShortDeviceType(d.Kind)} · {name}";
                 color = GetDeviceColor(d.Kind);
             }
@@ -830,23 +828,23 @@ internal sealed class RackPlannerScreenController
         ClearChildren(content.transform);
         if (template == null)
         {
-            BuildLabel(content.transform, "Wähle eine Vorlage links aus, um die Vorschau zu sehen.", 16f, TextAlignmentOptions.Center, new Color(0.85f, 0.9f, 1f, 1f));
+            BuildLabel(content.transform, "Select a template on the left to see the preview.", 16f, TextAlignmentOptions.Center, new Color(0.85f, 0.9f, 1f, 1f));
             return;
         }
 
         BuildSectionTitle(content.transform, template.Name);
-        BuildLabel(content.transform, $"Erstellt: {template.CreatedUtc}", 12f, TextAlignmentOptions.Left, new Color(0.7f, 0.78f, 0.92f, 1f));
-        BuildLabel(content.transform, $"Quelle: {template.SourceRackLabel}", 13f, TextAlignmentOptions.Left, Color.white);
+        BuildLabel(content.transform, $"Created: {template.CreatedUtc}", 12f, TextAlignmentOptions.Left, new Color(0.7f, 0.78f, 0.92f, 1f));
+        BuildLabel(content.transform, $"Source: {template.SourceRackLabel}", 13f, TextAlignmentOptions.Left, Color.white);
 
         // Price estimate block
         var price = RackPlannerService.EstimatePrice(template);
         BuildDivider(content.transform);
-        BuildSectionTitle(content.transform, "Preisschätzung");
-        BuildLabel(content.transform, $"Geräte (Basis): {price.DeviceBase}", 13f, TextAlignmentOptions.Left, Color.white);
-        BuildLabel(content.transform, $"Geräte (1,5x): {price.DeviceAdjusted}", 13f, TextAlignmentOptions.Left, new Color(1f, 0.84f, 0.44f, 1f));
-        BuildLabel(content.transform, $"Kabel: {price.CableLength:0.0} m  →  {price.CablePrice}", 13f, TextAlignmentOptions.Left, new Color(0.74f, 0.92f, 0.74f, 1f));
-        BuildLabel(content.transform, $"SFP+ Module: {price.SfpCount}  →  {price.SfpPrice}", 13f, TextAlignmentOptions.Left, new Color(0.74f, 0.86f, 1f, 1f));
-        BuildLabel(content.transform, $"Gesamt: {price.Total}", 16f, TextAlignmentOptions.Left, new Color(1f, 0.92f, 0.62f, 1f));
+        BuildSectionTitle(content.transform, "Price Estimate");
+        BuildLabel(content.transform, $"Devices (base): {price.DeviceBase}", 13f, TextAlignmentOptions.Left, Color.white);
+        BuildLabel(content.transform, $"Devices (1.5x): {price.DeviceAdjusted}", 13f, TextAlignmentOptions.Left, new Color(1f, 0.84f, 0.44f, 1f));
+        BuildLabel(content.transform, $"Cables: {price.CableLength:0.0} m  →  {price.CablePrice}", 13f, TextAlignmentOptions.Left, new Color(0.74f, 0.92f, 0.74f, 1f));
+        BuildLabel(content.transform, $"SFP+ Modules: {price.SfpCount}  →  {price.SfpPrice}", 13f, TextAlignmentOptions.Left, new Color(0.74f, 0.86f, 1f, 1f));
+        BuildLabel(content.transform, $"Total: {price.Total}", 16f, TextAlignmentOptions.Left, new Color(1f, 0.92f, 0.62f, 1f));
 
         // Blueprint: visual rack column with sized device blocks
         BuildDivider(content.transform);
@@ -857,7 +855,7 @@ internal sealed class RackPlannerScreenController
         if (template.Cables != null && template.Cables.Count > 0)
         {
             BuildDivider(content.transform);
-            BuildSectionTitle(content.transform, "Kabelverbindungen");
+            BuildSectionTitle(content.transform, "Cable Connections");
             foreach (var c in template.Cables.Take(40))
             {
                 var aName = template.Devices.ElementAtOrDefault(c.EndA.DeviceIndex)?.DisplayName ?? "?";
@@ -866,7 +864,7 @@ internal sealed class RackPlannerScreenController
                 BuildLabel(content.transform, $"{aName}:p{c.EndA.PortIndex} ↔ {bName}:p{c.EndB.PortIndex}  ({c.Length:0.0}m{sfp})", 12f, TextAlignmentOptions.Left, new Color(0.86f, 0.92f, 1f, 1f));
             }
             if (template.Cables.Count > 40)
-                BuildLabel(content.transform, $"… {template.Cables.Count - 40} weitere", 12f, TextAlignmentOptions.Left, new Color(0.7f, 0.78f, 0.92f, 1f));
+                BuildLabel(content.transform, $"… {template.Cables.Count - 40} more", 12f, TextAlignmentOptions.Left, new Color(0.7f, 0.78f, 0.92f, 1f));
         }
     }
 
@@ -908,7 +906,7 @@ internal sealed class RackPlannerScreenController
             var rowImg = row.AddComponent<Image>();
             rowImg.color = d == null ? new Color(0.10f, 0.12f, 0.15f, 1f) : GetDeviceColor(d.Kind);
 
-            var lbl = BuildLabel(row.transform, d == null ? $"U{slot + 1:00} – frei" : (slot == d.StartIndex + DeviceSize(d) - 1 ? $"U{slot + 1:00}  {ShortDeviceType(d.Kind)} {d.DisplayName}" : $"U{slot + 1:00}  …"), 11f, TextAlignmentOptions.MidlineLeft, Color.white);
+            var lbl = BuildLabel(row.transform, d == null ? $"U{slot + 1:00} – empty" : (slot == d.StartIndex + DeviceSize(d) - 1 ? $"U{slot + 1:00}  {ShortDeviceType(d.Kind)} {d.DisplayName}" : $"U{slot + 1:00}  …"), 11f, TextAlignmentOptions.MidlineLeft, Color.white);
             Stretch(lbl.rectTransform, new Vector2(8f, 1f), new Vector2(-4f, -1f));
         }
     }
@@ -998,7 +996,7 @@ internal sealed class RackPlannerScreenController
     {
         // Header was the first child, find it
         // Insert at end of header row
-        BuildButton(headerRow, "← Zurück", () => ShowPage(Page.Main), 110f);
+        BuildButton(headerRow, "← Back", () => ShowPage(Page.Main), 110f);
     }
 
     private void AddZoomButtons(Transform headerRow, Func<float> getZoom, Action<float> setZoom)
@@ -1051,7 +1049,7 @@ internal sealed class RackPlannerScreenController
                 var newZoom = Mathf.Clamp(getZoom() * factor, MinZoom, MaxZoom);
                 setZoom(newZoom);
             }
-            catch (Exception ex) { MelonLoader.MelonLogger.Warning($"[RackPlanner] Zoom error: {ex.Message}"); }
+            catch (Exception ex) { MelonLoader.MelonLogger.Warning($"Zoom error: {ex.Message}"); }
         };
     }
 
@@ -1083,7 +1081,7 @@ internal sealed class RackPlannerScreenController
         bL.padding = bp; bL.spacing = 10f;
         bL.childControlWidth = true; bL.childForceExpandWidth = true;
 
-        _modalPrompt = BuildLabel(box.transform, "Eingabe:", 18f, TextAlignmentOptions.Left, Color.white);
+        _modalPrompt = BuildLabel(box.transform, "Input:", 18f, TextAlignmentOptions.Left, Color.white);
         SetPreferredHeight(_modalPrompt.gameObject, 28f);
 
         // Input field
@@ -1111,16 +1109,16 @@ internal sealed class RackPlannerScreenController
         var rl = row.AddComponent<HorizontalLayoutGroup>();
         rl.spacing = 8f; rl.childControlWidth = true; rl.childForceExpandWidth = true; rl.childControlHeight = true; rl.childForceExpandHeight = true;
         SetPreferredHeight(row, 40f);
-        BuildButton(row.transform, "Abbrechen", CloseModal, 0f);
+        BuildButton(row.transform, "Cancel", CloseModal, 0f);
         BuildButton(row.transform, "OK", () =>
         {
             string text = string.Empty;
             try { text = _modalInput != null ? _modalInput.text ?? string.Empty : string.Empty; }
-            catch (Exception ex) { MelonLoader.MelonLogger.Warning($"[RackPlanner] Modal read failed: {ex.Message}"); }
+            catch (Exception ex) { MelonLoader.MelonLogger.Warning($"Modal read failed: {ex.Message}"); }
             var cb = _modalCallback;
             CloseModal();
             try { cb?.Invoke(text); }
-            catch (Exception ex) { MelonLoader.MelonLogger.Error($"[RackPlanner] Modal callback failed: {ex}"); }
+            catch (Exception ex) { MelonLoader.MelonLogger.Error($"Modal callback failed: {ex}"); }
         }, 0f);
 
         return modal;
@@ -1145,13 +1143,13 @@ internal sealed class RackPlannerScreenController
                 try { _modalInput.text = defaultValue ?? string.Empty; }
                 catch (Exception inner)
                 {
-                    MelonLoader.MelonLogger.Warning($"[RackPlanner] Modal input init failed: {inner.Message}");
+                    MelonLoader.MelonLogger.Warning($"Modal input init failed: {inner.Message}");
                 }
             }
         }
         catch (Exception ex)
         {
-            MelonLoader.MelonLogger.Error($"[RackPlanner] OpenModal failed: {ex}");
+            MelonLoader.MelonLogger.Error($"OpenModal failed: {ex}");
         }
     }
 

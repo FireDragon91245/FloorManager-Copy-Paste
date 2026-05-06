@@ -22,7 +22,7 @@ public sealed class FloorManagerCopyPasteMod : MelonMod
 	{
 		HarmonyInstance.PatchAll(Assembly.GetExecutingAssembly());
 		RackPlannerService.InitializeSaveDiagnostics();
-		LoggerInstance.Msg("Floor Manager: Copy & Paste initialisiert. F6 repariert verwaiste Rack-Geräte.");
+		LoggerInstance.Msg("Floor Manager: Copy & Paste initialized. F6 repairs orphaned rack devices.");
 	}
 
 	public override void OnUpdate()

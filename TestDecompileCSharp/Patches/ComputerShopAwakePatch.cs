@@ -27,14 +27,14 @@ public static class ComputerShopAwakePatch
 
             if (canvasComputerShop == null || mainScreen == null)
             {
-                MelonLogger.Warning("[FloorManager] canvasComputerShop oder mainScreen war null; Button-Injektion übersprungen.");
+                MelonLogger.Warning("canvasComputerShop or mainScreen was null; button injection skipped.");
                 return;
             }
 
             var layoutGroup = mainScreen.GetComponentInChildren<LayoutGroup>();
             if (layoutGroup == null)
             {
-                MelonLogger.Warning("[FloorManager] Kein LayoutGroup-Knoten im Laptop-Hauptscreen gefunden.");
+                MelonLogger.Warning("No LayoutGroup node found in the laptop main screen.");
                 return;
             }
 
@@ -44,11 +44,11 @@ public static class ComputerShopAwakePatch
             var button = BuildAppButton(layoutGroup.transform, "FLOOR");
             button.gameObject.name = FloorManagerCopyPasteMod.FloorManagerButtonObjectName;
             button.onClick.AddListener(DelegateSupport.ConvertDelegate<UnityAction>(() => OpenFloorManagerScreen(__instance, mainScreen)));
-            MelonLogger.Msg("[FloorManager] Floor-Manager-Button im Laptop eingefügt.");
+            MelonLogger.Msg("Floor Manager button injected into the laptop UI.");
         }
         catch (Exception ex)
         {
-            MelonLogger.Error($"[FloorManager] Fehler in ComputerShop.Awake-Postfix: {ex}");
+            MelonLogger.Error($"Error in ComputerShop.Awake postfix: {ex}");
         }
     }
 

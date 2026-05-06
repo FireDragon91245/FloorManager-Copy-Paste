@@ -1,8 +1,19 @@
 ﻿$ErrorActionPreference = 'Stop'
 
-$gamePath = 'D:\SteamLibrary\steamapps\common\Data Center'
-$toolPath = 'C:\Users\rivo\RiderProjects\TestDecompileCSharp\FixCoreModule_src\bin\Release\net8.0\FixCoreModule.dll'
-$logPath = 'C:\Users\rivo\RiderProjects\TestDecompileCSharp\fixcoremodule_admin_output.txt'
+$repoRoot = Split-Path -Parent $PSCommandPath
+$propsPath = Join-Path $repoRoot 'Directory.Build.props.user'
+if (-not (Test-Path $propsPath)) {
+    throw 'Create Directory.Build.props.user with a GameDir property before running this script.'
+}
+
+[xml]$propsXml = Get-Content -Path $propsPath -Encoding UTF8
+$gamePath = $propsXml.Project.PropertyGroup.GameDir
+if ([string]::IsNullOrWhiteSpace($gamePath)) {
+    throw 'Directory.Build.props.user is missing GameDir.'
+}
+
+$toolPath = Join-Path $repoRoot 'FixCoreModule_src\bin\Release\net8.0\FixCoreModule.dll'
+$logPath = Join-Path $repoRoot 'fixcoremodule_admin_output.txt'
 
 "[START] $(Get-Date -Format o)" | Set-Content -Path $logPath -Encoding UTF8
 "GAME=$gamePath" | Add-Content -Path $logPath -Encoding UTF8

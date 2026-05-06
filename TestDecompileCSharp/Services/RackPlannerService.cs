@@ -72,11 +72,11 @@ internal static class RackPlannerService
             // underlying multicast list, so direct compound assignment works.
             SaveSystem.onSavingData += del;
             _onSavingHookInstalled = true;
-            MelonLogger.Msg("[RackPlanner][SAVE-HOOK] subscribed to SaveSystem.onSavingData");
+            MelonLogger.Msg(" subscribed to SaveSystem.onSavingData");
         }
         catch (Exception ex)
         {
-            MelonLogger.Warning($"[RackPlanner][SAVE-HOOK] subscribe failed: {ex.Message}");
+            MelonLogger.Warning($" subscribe failed: {ex.Message}");
         }
     }
 
@@ -87,7 +87,7 @@ internal static class RackPlannerService
             var network = EnsureNetworkSaveData();
             if (network == null)
             {
-                MelonLogger.Warning("[RackPlanner][SAVE-HOOK] EnsureNetworkSaveData returned null");
+                MelonLogger.Warning(" EnsureNetworkSaveData returned null");
                 return;
             }
 
@@ -131,7 +131,7 @@ internal static class RackPlannerService
         }
         catch (Exception ex)
         {
-            MelonLogger.Warning($"[RackPlanner][SAVE-HOOK] handler failed: {ex.Message}");
+            MelonLogger.Warning($" handler failed: {ex.Message}");
         }
     }
 
@@ -184,18 +184,18 @@ internal static class RackPlannerService
             var mgm = MainGameManager.instance;
             if (mgm == null || mgm.rackPrefab == null)
             {
-                message = "Rack-Prefab fehlt.";
+                message = "Rack prefab is missing.";
                 return false;
             }
             var inst = Object.Instantiate(mgm.rackPrefab, worldPos, Quaternion.identity);
-            if (inst == null) { message = "Instanzierung fehlgeschlagen."; return false; }
-            message = $"Neues Rack platziert bei {worldPos}.";
+            if (inst == null) { message = "Instantiation failed."; return false; }
+            message = $"Placed new rack at {worldPos}.";
             return true;
         }
         catch (Exception ex)
         {
-            message = $"Fehler: {ex.Message}";
-            MelonLogger.Error($"[RackPlanner] BuyRack failed: {ex}");
+            message = $"Error: {ex.Message}";
+            MelonLogger.Error($"BuyRack failed: {ex}");
             return false;
         }
     }
@@ -263,7 +263,7 @@ internal static class RackPlannerService
         }
         catch (Exception ex)
         {
-            MelonLogger.Error($"[RackPlanner] Konnte Templates nicht laden: {ex}");
+            MelonLogger.Error($"Failed to load templates: {ex}");
             return new List<RackTemplate>();
         }
     }
@@ -288,7 +288,7 @@ internal static class RackPlannerService
         {
             if (!IsWithinRack(device, targetRack.TotalSlots))
             {
-                preview.Conflicts.Add($"{device.DisplayName}: außerhalb des Ziel-Racks.");
+                preview.Conflicts.Add($"{device.DisplayName}: outside the target rack.");
                 continue;
             }
 
@@ -308,7 +308,7 @@ internal static class RackPlannerService
                 continue;
             }
 
-            preview.Conflicts.Add($"Slot U{device.StartIndex + 1}: {blockingDevice.DisplayName} blockiert {device.DisplayName}.");
+            preview.Conflicts.Add($"Slot U{device.StartIndex + 1}: {blockingDevice.DisplayName} blocks {device.DisplayName}.");
         }
 
         preview.CableCount = template.Cables?.Count ?? 0;
@@ -330,7 +330,7 @@ internal static class RackPlannerService
         var player = PlayerManager.instance?.playerClass;
         if (player == null && preview.Purchases.Count > 0)
         {
-            result.Messages.Add("Spieler konnte nicht gefunden werden.");
+            result.Messages.Add("Player could not be found.");
             return result;
         }
 
@@ -339,7 +339,7 @@ internal static class RackPlannerService
             var requiredFunds = preview.AdjustedCost;
             if (player.money < requiredFunds)
             {
-                result.Messages.Add($"Zu wenig Geld: benötigt {requiredFunds:0}, vorhanden {player.money:0}.");
+                result.Messages.Add($"Not enough money: need {requiredFunds:0}, have {player.money:0}.");
                 return result;
             }
         }
@@ -381,13 +381,13 @@ internal static class RackPlannerService
             }
             catch (Exception ex)
             {
-                result.Messages.Add($"Kabel-Clone abgebrochen: {ex.Message}");
-                MelonLogger.Error($"[RackPlanner] Cable apply failed: {ex}");
+                result.Messages.Add($"Cable clone aborted: {ex.Message}");
+                MelonLogger.Error($"Cable apply failed: {ex}");
             }
         }
 
         if (preview.Purchases.Count == 0 && result.CablesCreated == 0)
-            result.Messages.Add("Nichts zu kaufen oder einzufügen – Ziel-Rack passt bereits.");
+            result.Messages.Add("Nothing to buy or paste – the target rack already matches.");
 
 
         return result;
@@ -845,7 +845,7 @@ internal static class RackPlannerService
             }
             catch (Exception ex)
             {
-                MelonLogger.Warning($"[RackPlanner] Cable route capture failed for cableId={pair.Key}: {ex.Message}");
+                MelonLogger.Warning($"Cable route capture failed for cableId={pair.Key}: {ex.Message}");
                 fullyInside = false;
             }
 
@@ -936,7 +936,7 @@ internal static class RackPlannerService
         var devicesByRack = BuildDeviceMap();
         if (!devicesByRack.TryGetValue(targetRack.Rack, out var targetDevices))
         {
-            result.Messages.Add("Kabel-Clone: keine Ziel-Geräte gefunden.");
+            result.Messages.Add("Cable clone: no target devices found.");
             return;
         }
 
@@ -952,7 +952,7 @@ internal static class RackPlannerService
         var positions = CablePositions.instance;
         if (positions == null)
         {
-            result.Messages.Add("Kabel-Clone: CablePositions.instance fehlt.");
+            result.Messages.Add("Cable clone: CablePositions.instance is missing.");
             return;
         }
 
@@ -1088,12 +1088,12 @@ internal static class RackPlannerService
             catch (Exception ex)
             {
                 result.CablesFailed++;
-                MelonLogger.Warning($"[RackPlanner] Kabel-Clone Fehler: {ex.Message}");
+                MelonLogger.Warning($"Cable clone error: {ex.Message}");
             }
         }
 
         if (template.Cables.Count > 0)
-            result.Messages.Add($"Kabel: {result.CablesCreated} erstellt, {result.CablesFailed} fehlgeschlagen.");
+            result.Messages.Add($"Cables: {result.CablesCreated} created, {result.CablesFailed} failed.");
     }
 
     private static CableEndpointSaveData BuildCableEndpointSaveData(DeviceWithRuntime dev, CableLink link, CableLink.TypeOfLink type)
@@ -1145,7 +1145,7 @@ internal static class RackPlannerService
             var wis = WaypointInitializationSystem.Instance;
             if (wis == null)
             {
-                MelonLogger.Warning("[RackPlanner][CABLE-VANILLA] WaypointInitializationSystem.Instance is null; cable will NOT be saved");
+                MelonLogger.Warning("WaypointInitializationSystem.Instance is null; cable will NOT be saved");
             }
             else
             {
@@ -1159,11 +1159,11 @@ internal static class RackPlannerService
                 {
                     var dict = wis.cables;
                     if (dict != null) dict[cableId] = info;
-                    else MelonLogger.Warning($"[RackPlanner][CABLE-VANILLA] wis.cables is null for {cableId}");
+                    else MelonLogger.Warning($"wis.cables is null for {cableId}");
                 }
                 catch (Exception exDict)
                 {
-                    MelonLogger.Warning($"[RackPlanner][CABLE-VANILLA] direct dict insert failed for {cableId}: {exDict.Message}");
+                    MelonLogger.Warning($"direct dict insert failed for {cableId}: {exDict.Message}");
                 }
                 wis.UpdateCableInfo(cableId, info);
                 primaryOk = true;
@@ -1171,7 +1171,7 @@ internal static class RackPlannerService
         }
         catch (Exception ex)
         {
-            MelonLogger.Warning($"[RackPlanner][CABLE-VANILLA] UpdateCableInfo failed for {cableId}: {ex.Message}");
+            MelonLogger.Warning($"UpdateCableInfo failed for {cableId}: {ex.Message}");
         }
 
         // (b) NetworkMap.RegisterCableConnection — fills cableConnections so route
@@ -1197,12 +1197,12 @@ internal static class RackPlannerService
         }
         catch (Exception ex)
         {
-            MelonLogger.Warning($"[RackPlanner][CABLE-VANILLA] NetworkMap.RegisterCableConnection failed for {cableId}: {ex.Message}");
+            MelonLogger.Warning($"NetworkMap.RegisterCableConnection failed for {cableId}: {ex.Message}");
         }
 
         // (c) Trigger route recomputation so the new cable starts carrying packets.
         try { WaypointInitializationSystem.Instance?.RequestRouteEvaluation(); }
-        catch (Exception ex) { MelonLogger.Warning($"[RackPlanner][CABLE-VANILLA] RequestRouteEvaluation failed: {ex.Message}"); }
+        catch (Exception ex) { MelonLogger.Warning($"RequestRouteEvaluation failed: {ex.Message}"); }
 
         return primaryOk;
     }
@@ -1287,7 +1287,7 @@ internal static class RackPlannerService
             }
             catch (Exception ex)
             {
-                MelonLogger.Warning($"[RackPlanner] SFP instantiate failed type={sfpType}: {ex.Message}");
+                MelonLogger.Warning($"SFP instantiate failed type={sfpType}: {ex.Message}");
             }
         }
 
@@ -1393,7 +1393,7 @@ internal static class RackPlannerService
         }
         catch (Exception ex)
         {
-            MelonLogger.Warning($"[RackPlanner] AddSfpToCurrentSave failed: {ex.Message}");
+            MelonLogger.Warning($"AddSfpToCurrentSave failed: {ex.Message}");
         }
     }
 
@@ -1434,7 +1434,7 @@ internal static class RackPlannerService
         {
             pos.SetUID(newUid);
         }
-        catch (Exception ex) { MelonLogger.Warning($"[RackPlanner] SetUID({newUid}) failed: {ex.Message}"); }
+        catch (Exception ex) { MelonLogger.Warning($"SetUID({newUid}) failed: {ex.Message}"); }
     }
 
     private static bool RackPositionUidIsUsedByAnotherPosition(RackPosition pos, int uid)
@@ -1541,7 +1541,7 @@ internal static class RackPlannerService
             }
             catch (Exception ex)
             {
-                MelonLogger.Warning($"[RackPlanner][REPAIR] NetworkMap re-register pass failed: {ex.Message}");
+                MelonLogger.Warning($"NetworkMap re-register pass failed: {ex.Message}");
             }
 
             var allUsable = Object.FindObjectsOfType<UsableObject>();
@@ -1580,19 +1580,19 @@ internal static class RackPlannerService
                     try { uo.RemoveRigidbody(); } catch { /* non-fatal */ }
                     UpsertMountedDeviceSaveData(uo, best);
                     repaired++;
-                    MelonLogger.Msg($"[RackPlanner][REPAIR] relinked '{uo.name}' → rack='{best.rack?.name}' uid={best.rackPosGlobalUID}");
+                    MelonLogger.Msg($"relinked '{uo.name}' → rack='{best.rack?.name}' uid={best.rackPosGlobalUID}");
                 }
                 catch (Exception ex)
                 {
-                    MelonLogger.Warning($"[RackPlanner][REPAIR] relink failed for '{uo.name}': {ex.Message}");
+                    MelonLogger.Warning($"relink failed for '{uo.name}': {ex.Message}");
                 }
             }
         }
         catch (Exception ex)
         {
-            MelonLogger.Warning($"[RackPlanner][REPAIR] aborted: {ex.Message}");
+            MelonLogger.Warning($"aborted: {ex.Message}");
         }
-        MelonLogger.Msg($"[RackPlanner][REPAIR] done; relinked {repaired} orphaned device(s).");
+        MelonLogger.Msg($"done; relinked {repaired} orphaned device(s).");
         return repaired;
     }
 
@@ -1640,7 +1640,7 @@ internal static class RackPlannerService
         }
         catch (Exception ex)
         {
-            MelonLogger.Warning($"[RackPlanner] Vanilla device-state sync failed for '{template.DisplayName}': {ex.Message}");
+            MelonLogger.Warning($"Vanilla device-state sync failed for '{template.DisplayName}': {ex.Message}");
         }
     }
 
@@ -1860,7 +1860,7 @@ internal static class RackPlannerService
             var anchorPhysicalSlot = ResolveAnchorPhysicalSlot(template.StartIndex, sizeU);
             if (rack.positions == null || template.StartIndex < 0 || anchorPhysicalSlot >= rack.positions.Count)
             {
-                message = $"{template.DisplayName}: ungültige Zielposition.";
+                message = $"{template.DisplayName}: invalid target position.";
                 return false;
             }
 
@@ -1873,28 +1873,28 @@ internal static class RackPlannerService
             var arrayStart = ResolveAnchorArrayIndex(rack, template.StartIndex, sizeU);
             if (arrayStart < 0)
             {
-                message = $"{template.DisplayName}: ungültige Zielposition.";
+                message = $"{template.DisplayName}: invalid target position.";
                 return false;
             }
 
             var available = rack.IsPositionAvailable(arrayStart, sizeU);
             if (!available)
             {
-                message = $"{template.DisplayName}: Ziel-Slots sind nicht frei.";
+                message = $"{template.DisplayName}: target slots are not free.";
                 return false;
             }
 
             var rackPosition = GetPositionByPhysicalSlot(rack, anchorPhysicalSlot);
             if (rackPosition == null)
             {
-                message = $"{template.DisplayName}: RackPosition fehlt.";
+                message = $"{template.DisplayName}: RackPosition is missing.";
                 return false;
             }
 
             var prefab = ResolvePrefab(template);
             if (prefab == null)
             {
-                message = $"{template.DisplayName}: kein passendes Prefab gefunden.";
+                message = $"{template.DisplayName}: no matching prefab found.";
                 return false;
             }
 
@@ -1923,7 +1923,7 @@ internal static class RackPlannerService
                 instance = Object.Instantiate(prefab, parentTr);
                 if (instance == null)
                 {
-                    message = $"{template.DisplayName}: Prefab-Instanzierung fehlgeschlagen.";
+                    message = $"{template.DisplayName}: prefab instantiation failed.";
                     return false;
                 }
                 // Ensure instance is inactive even if prefab.SetActive() above failed
@@ -1939,8 +1939,8 @@ internal static class RackPlannerService
             if (usableObject == null)
             {
                 Object.Destroy(instance);
-                message = $"{template.DisplayName}: UsableObject-Komponente fehlt.";
-                MelonLogger.Warning($"[RackPlanner] {message}");
+                message = $"{template.DisplayName}: UsableObject component is missing.";
+                MelonLogger.Warning($"{message}");
                 return false;
             }
 
@@ -1973,12 +1973,12 @@ internal static class RackPlannerService
             var hasCapturedPose = capturedLocalPos.sqrMagnitude > 0.000001f || capturedLocalEuler.sqrMagnitude > 0.000001f;
 
             // Activate now -> Awake() runs with all fields set.
-            try { instance.SetActive(true); } catch (Exception ex) { MelonLogger.Warning($"[RackPlanner] SetActive failed: {ex.Message}"); }
+            try { instance.SetActive(true); } catch (Exception ex) { MelonLogger.Warning($"SetActive failed: {ex.Message}"); }
 
             // Mounted devices must NOT have an active rigidbody; otherwise they'd fall
             // out of the rack and the player couldn't pick them up cleanly. The game
             // calls RemoveRigidbody() during its own RackPosition.InsertItemInRack flow.
-            try { usableObject.RemoveRigidbody(); } catch (Exception ex) { MelonLogger.Warning($"[RackPlanner] RemoveRigidbody failed: {ex.Message}"); }
+            try { usableObject.RemoveRigidbody(); } catch (Exception ex) { MelonLogger.Warning($"RemoveRigidbody failed: {ex.Message}"); }
 
             switch (template.Kind)
             {
@@ -1986,7 +1986,7 @@ internal static class RackPlannerService
                 {
                     var server = instance.GetComponent<Server>();
                     if (server == null)
-                        throw new InvalidOperationException("Server-Komponente fehlt.");
+                        throw new InvalidOperationException("Server component is missing.");
 
                     // Pass null = fresh-insert path. The game initialises a unique
                     // ServerID, valid IP, customer assignment, eolTime/timeToBrake
@@ -2008,7 +2008,7 @@ internal static class RackPlannerService
                         }
                         catch (Exception ex)
                         {
-                            MelonLogger.Warning($"[RackPlanner] GenerateUniqueServerId failed: {ex.Message}");
+                            MelonLogger.Warning($"GenerateUniqueServerId failed: {ex.Message}");
                         }
                     }
 
@@ -2030,7 +2030,7 @@ internal static class RackPlannerService
                         if (template.ServerType > 0 && server.serverType != template.ServerType)
                             server.serverType = template.ServerType;
                     }
-                    catch (Exception ex) { MelonLogger.Warning($"[RackPlanner] set serverType failed: {ex.Message}"); }
+                    catch (Exception ex) { MelonLogger.Warning($"set serverType failed: {ex.Message}"); }
 
                     try
                     {
@@ -2043,7 +2043,7 @@ internal static class RackPlannerService
                             server.ButtonClickChangeIP();
                         }
                     }
-                    catch (Exception ex) { MelonLogger.Warning($"[RackPlanner] ButtonClickChangeIP failed: {ex.Message}"); }
+                    catch (Exception ex) { MelonLogger.Warning($"ButtonClickChangeIP failed: {ex.Message}"); }
 
                     // CRITICAL: NetworkSaveData()'s snapshot ctor iterates
                     // NetworkMap.servers (Dictionary<string, Server>) at save time.
@@ -2052,7 +2052,7 @@ internal static class RackPlannerService
                     // customer assignment, so the server is never registered → snapshot
                     // ctor doesn't see it → server vanishes from save. Force-register.
                     try { NetworkMap.instance?.RegisterServer(server); }
-                    catch (Exception ex) { MelonLogger.Warning($"[RackPlanner] RegisterServer failed: {ex.Message}"); }
+                    catch (Exception ex) { MelonLogger.Warning($"RegisterServer failed: {ex.Message}"); }
                     if (!string.IsNullOrEmpty(server.ServerID))
                     {
                         PastedServerIds.Add(server.ServerID);
@@ -2066,13 +2066,13 @@ internal static class RackPlannerService
                 {
                     var networkSwitch = instance.GetComponent<NetworkSwitch>();
                     if (networkSwitch == null)
-                        throw new InvalidOperationException("Switch-Komponente fehlt.");
+                        throw new InvalidOperationException("Switch component is missing.");
 
                     networkSwitch.SwitchInsertedInRack(null); // fresh-insert path
                     // Idempotent insurance: if SwitchInsertedInRack already registered
                     // the switch this is a no-op (Dictionary indexer overwrites).
                     try { NetworkMap.instance?.RegisterSwitch(networkSwitch); }
-                    catch (Exception ex) { MelonLogger.Warning($"[RackPlanner] RegisterSwitch failed: {ex.Message}"); }
+                    catch (Exception ex) { MelonLogger.Warning($"RegisterSwitch failed: {ex.Message}"); }
                     if (!string.IsNullOrEmpty(template.Label)) networkSwitch.labelText = template.Label;
                     if (networkSwitch.isOn != template.IsPoweredOn)
                         networkSwitch.PowerButton(template.IsPoweredOn);
@@ -2082,7 +2082,7 @@ internal static class RackPlannerService
                 {
                     var patchPanel = instance.GetComponent<PatchPanel>();
                     if (patchPanel == null)
-                        throw new InvalidOperationException("PatchPanel-Komponente fehlt.");
+                        throw new InvalidOperationException("PatchPanel component is missing.");
 
                     patchPanel.InsertedInRack(null); // fresh-insert path
                     if (!string.IsNullOrEmpty(template.Label)) patchPanel.labelText = template.Label;
@@ -2112,7 +2112,7 @@ internal static class RackPlannerService
                 rack.MarkPositionAsUsed(arrayStart, sizeU);
                 rackPosition.SetUsed(true);
             }
-            catch (Exception ex) { MelonLogger.Warning($"[RackPlanner] post-insert MarkPositionAsUsed failed: {ex.Message}"); }
+            catch (Exception ex) { MelonLogger.Warning($"post-insert MarkPositionAsUsed failed: {ex.Message}"); }
 
             // The InsertedInRack methods are required for IDs/state, but their visual
             // placement is based on the newly selected rackPosition and can interpret a
@@ -2137,13 +2137,13 @@ internal static class RackPlannerService
 
             SyncMountedDeviceWithVanillaState(rack, rackPosition, template, usableObject);
 
-            message = $"{template.DisplayName} eingefügt (+{CalculateAdjustedPrice(template.BasePrice)}).";
+            message = $"{template.DisplayName} inserted (+{CalculateAdjustedPrice(template.BasePrice)}).";
             return true;
         }
         catch (Exception ex)
         {
-            message = $"{template.DisplayName}: Fehler beim Einfügen – {ex.Message}";
-            MelonLogger.Error($"[RackPlanner] TrySpawnIntoRack failed: {ex}");
+            message = $"{template.DisplayName}: error while inserting – {ex.Message}";
+            MelonLogger.Error($"TrySpawnIntoRack failed: {ex}");
             return false;
         }
     }
