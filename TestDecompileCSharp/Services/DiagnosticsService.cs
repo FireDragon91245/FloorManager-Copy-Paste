@@ -23,7 +23,14 @@ internal static class DiagnosticsService
         }
         catch (Exception ex)
         {
-            try { MelonLogger.Warning($"Repair hotkey failed: {ex.Message}"); } catch { /* swallow */ }
+            try
+            {
+                MelonLogger.Warning($"Repair hotkey failed: {ex.Message}");
+            }
+            catch
+            {
+                /* swallow */
+            }
         }
     }
 }

@@ -32,13 +32,22 @@ internal sealed class WheelZoomBehaviour : MonoBehaviour
     public Action<float> OnWheelDelta;
 
     // Required ctor for Il2Cpp-injected MonoBehaviours.
-    public WheelZoomBehaviour(IntPtr ptr) : base(ptr) { }
+    public WheelZoomBehaviour(IntPtr ptr) : base(ptr)
+    {
+    }
 
     public static void EnsureRegistered()
     {
         if (_registered) return;
-        try { ClassInjector.RegisterTypeInIl2Cpp<WheelZoomBehaviour>(); }
-        catch (Exception ex) { MelonLoader.MelonLogger.Warning($"WheelZoomBehaviour register failed: {ex.Message}"); }
+        try
+        {
+            ClassInjector.RegisterTypeInIl2Cpp<WheelZoomBehaviour>();
+        }
+        catch (Exception ex)
+        {
+            MelonLoader.MelonLogger.Warning($"WheelZoomBehaviour register failed: {ex.Message}");
+        }
+
         _registered = true;
     }
 
@@ -46,7 +55,7 @@ internal sealed class WheelZoomBehaviour : MonoBehaviour
     {
         try
         {
-            if (Target == null || OnWheelDelta == null) return;
+            if (!Target || OnWheelDelta == null) return;
 
             // Use the new Input System (legacy UnityEngine.Input throws because the
             // game's Player Settings has switched to "Input System Package").
@@ -76,8 +85,3 @@ internal sealed class WheelZoomBehaviour : MonoBehaviour
         }
     }
 }
-
-
-
-
-

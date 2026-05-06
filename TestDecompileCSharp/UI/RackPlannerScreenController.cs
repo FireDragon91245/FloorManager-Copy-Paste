@@ -18,7 +18,13 @@ internal sealed class RackPlannerScreenController
 {
     public static RackPlannerScreenController Instance { get; } = new();
 
-    private enum Page { Main, FloorPlan, PlanRacks, ViewTemplates }
+    private enum Page
+    {
+        Main,
+        FloorPlan,
+        PlanRacks,
+        ViewTemplates
+    }
 
     // ------------------------------------------------------------------ state
     private readonly List<RackRuntimeInfo> _racks = new();
@@ -140,7 +146,8 @@ internal sealed class RackPlannerScreenController
         _templates.AddRange(RackPlannerService.LoadTemplates());
 
         _floorPlanSelectedRack = ResolveRack(_floorPlanSelectedRack?.Rack) ?? _racks.FirstOrDefault();
-        _planRacksSelectedRack = ResolveRack(_planRacksSelectedRack?.Rack) ?? _racks.FirstOrDefault(r => r.UsedSlots == 0) ?? _racks.FirstOrDefault();
+        _planRacksSelectedRack = ResolveRack(_planRacksSelectedRack?.Rack) ??
+                                 _racks.FirstOrDefault(r => r.UsedSlots == 0) ?? _racks.FirstOrDefault();
 
         if (_planTemplateIndex >= _templates.Count) _planTemplateIndex = _templates.Count - 1;
         if (_vtSelectedIndex >= _templates.Count) _vtSelectedIndex = _templates.Count - 1;
@@ -191,16 +198,22 @@ internal sealed class RackPlannerScreenController
         colRt.pivot = new Vector2(0.5f, 0.5f);
         colRt.sizeDelta = new Vector2(560f, 480f);
         var colLayout = col.AddComponent<VerticalLayoutGroup>();
-        var pad = new RectOffset(); pad.left = 24; pad.right = 24; pad.top = 24; pad.bottom = 24;
+        var pad = new RectOffset();
+        pad.left = 24;
+        pad.right = 24;
+        pad.top = 24;
+        pad.bottom = 24;
         colLayout.padding = pad;
         colLayout.spacing = 16f;
         colLayout.childControlWidth = true;
         colLayout.childForceExpandWidth = true;
         colLayout.childAlignment = TextAnchor.UpperCenter;
 
-        var title = BuildLabel(col.transform, "Floor Manager: Copy & Paste", 38f, TextAlignmentOptions.Center, Color.white);
+        var title = BuildLabel(col.transform, "Floor Manager: Copy & Paste", 38f, TextAlignmentOptions.Center,
+            Color.white);
         SetPreferredHeight(title.gameObject, 56f);
-        var sub = BuildLabel(col.transform, "Tools for copying, pasting, and managing rack layouts", 16f, TextAlignmentOptions.Center, new Color(0.78f, 0.86f, 0.96f, 1f));
+        var sub = BuildLabel(col.transform, "Tools for copying, pasting, and managing rack layouts", 16f,
+            TextAlignmentOptions.Center, new Color(0.78f, 0.86f, 0.96f, 1f));
         SetPreferredHeight(sub.gameObject, 24f);
 
         BuildBigButton(col.transform, "Floor Plan", "View existing racks, copy them, or save them as templates",
@@ -231,13 +244,20 @@ internal sealed class RackPlannerScreenController
         b.navigation = new Navigation { mode = Navigation.Mode.None };
         b.onClick.AddListener(DelegateSupport.ConvertDelegate<UnityAction>(() =>
         {
-            try { onClick(); }
-            finally { if (EventSystem.current != null) EventSystem.current.SetSelectedGameObject(null); }
+            try
+            {
+                onClick();
+            }
+            finally
+            {
+                if (EventSystem.current != null) EventSystem.current.SetSelectedGameObject(null);
+            }
         }));
 
         var lblTitle = BuildLabel(btn.transform, title, 22f, TextAlignmentOptions.MidlineLeft, Color.white);
         Stretch(lblTitle.rectTransform, new Vector2(20f, 28f), new Vector2(-20f, -8f));
-        var lblSub = BuildLabel(btn.transform, subtitle, 13f, TextAlignmentOptions.MidlineLeft, new Color(1f, 1f, 1f, 0.78f));
+        var lblSub = BuildLabel(btn.transform, subtitle, 13f, TextAlignmentOptions.MidlineLeft,
+            new Color(1f, 1f, 1f, 0.78f));
         Stretch(lblSub.rectTransform, new Vector2(22f, 6f), new Vector2(-22f, -36f));
     }
 
@@ -277,33 +297,51 @@ internal sealed class RackPlannerScreenController
 
         BuildButton(btnRow.transform, "Copy", () =>
         {
-            if (_floorPlanSelectedRack == null) { _fpStatus.text = "No rack selected."; return; }
+            if (_floorPlanSelectedRack == null)
+            {
+                _fpStatus.text = "No rack selected.";
+                return;
+            }
+
             RackPlannerService.Clipboard = RackPlannerService.CaptureRackTemplate(_floorPlanSelectedRack, "clipboard");
-            _fpStatus.text = $"Clipboard: {RackPlannerService.Clipboard.Devices.Count} devices, {RackPlannerService.Clipboard.Cables.Count} cables.";
+            _fpStatus.text =
+                $"Clipboard: {RackPlannerService.Clipboard.Devices.Count} devices, {RackPlannerService.Clipboard.Cables.Count} cables.";
         }, 0f);
 
         BuildButton(btnRow.transform, "Create Template", () =>
         {
             try
             {
-                if (_floorPlanSelectedRack == null) { _fpStatus.text = "No rack selected."; return; }
-                var rackToCapture = _floorPlanSelectedRack;
-                OpenModal($"Template name for {rackToCapture.Label}:", $"{rackToCapture.Label}_{DateTime.Now:HHmmss}", name =>
+                if (_floorPlanSelectedRack == null)
                 {
-                    try
+                    _fpStatus.text = "No rack selected.";
+                    return;
+                }
+
+                var rackToCapture = _floorPlanSelectedRack;
+                OpenModal($"Template name for {rackToCapture.Label}:", $"{rackToCapture.Label}_{DateTime.Now:HHmmss}",
+                    name =>
                     {
-                        if (string.IsNullOrWhiteSpace(name)) { _fpStatus.text = "Template name is empty."; return; }
-                        var t = RackPlannerService.CaptureRackTemplate(rackToCapture, name);
-                        _templates.Insert(0, t);
-                        RackPlannerService.SaveTemplates(_templates);
-                        _fpStatus.text = $"Template saved: {t.Name} ({t.Devices.Count} devices, {t.Cables.Count} cables).";
-                    }
-                    catch (Exception ex)
-                    {
-                        _fpStatus.text = $"Failed to save template: {ex.Message}";
-                        MelonLoader.MelonLogger.Error($"Create Template (save) failed: {ex}");
-                    }
-                });
+                        try
+                        {
+                            if (string.IsNullOrWhiteSpace(name))
+                            {
+                                _fpStatus.text = "Template name is empty.";
+                                return;
+                            }
+
+                            var t = RackPlannerService.CaptureRackTemplate(rackToCapture, name);
+                            _templates.Insert(0, t);
+                            RackPlannerService.SaveTemplates(_templates);
+                            _fpStatus.text =
+                                $"Template saved: {t.Name} ({t.Devices.Count} devices, {t.Cables.Count} cables).";
+                        }
+                        catch (Exception ex)
+                        {
+                            _fpStatus.text = $"Failed to save template: {ex.Message}";
+                            MelonLoader.MelonLogger.Error($"Create Template (save) failed: {ex}");
+                        }
+                    });
             }
             catch (Exception ex)
             {
@@ -313,9 +351,17 @@ internal sealed class RackPlannerScreenController
         }, 0f);
 
         // Header back-button row
-        AddBackButton(page.transform, _fpHeader.transform.parent);
-        AddZoomButtons(_fpHeader.transform.parent, () => _fpZoom, v => { _fpZoom = v; RefreshFloorPlan(); });
-        AttachMouseWheelZoom(floorScroll, () => _fpZoom, v => { _fpZoom = v; RefreshFloorPlan(); });
+        AddBackButton(_fpHeader.transform.parent);
+        AddZoomButtons(_fpHeader.transform.parent, () => _fpZoom, v =>
+        {
+            _fpZoom = v;
+            RefreshFloorPlan();
+        });
+        AttachMouseWheelZoom(floorScroll, () => _fpZoom, v =>
+        {
+            _fpZoom = v;
+            RefreshFloorPlan();
+        });
 
         return page;
     }
@@ -327,10 +373,16 @@ internal sealed class RackPlannerScreenController
         if (_racks.Count > 0 && _floorPlanSelectedRack == null)
             _floorPlanSelectedRack = _racks[0];
 
-        RenderFloorMap(_fpFloorContent, _racks, r => { _floorPlanSelectedRack = r; RefreshFloorPlan(); }, _floorPlanSelectedRack, _fpZoom);
+        RenderFloorMap(_fpFloorContent, _racks, r =>
+        {
+            _floorPlanSelectedRack = r;
+            RefreshFloorPlan();
+        }, _floorPlanSelectedRack, _fpZoom);
         RenderRackComponentSidebar(_fpSidebarContent, _floorPlanSelectedRack);
         if (string.IsNullOrEmpty(_fpStatus.text))
-            _fpStatus.text = _floorPlanSelectedRack == null ? "No racks found." : $"Selected: {_floorPlanSelectedRack.Label}";
+            _fpStatus.text = _floorPlanSelectedRack == null
+                ? "No racks found."
+                : $"Selected: {_floorPlanSelectedRack.Label}";
     }
 
     // ============================================================================
@@ -351,55 +403,90 @@ internal sealed class RackPlannerScreenController
         var sbInner = BuildContainer(sidebar.transform, -1f);
         SetFlexibleHeight(sbInner, 1f);
 
-        _prTemplateLabel = BuildLabel(sbInner.transform, "Template: –", 14f, TextAlignmentOptions.Left, new Color(0.85f, 0.92f, 1f, 1f));
+        _prTemplateLabel = BuildLabel(sbInner.transform, "Template: –", 14f, TextAlignmentOptions.Left,
+            new Color(0.85f, 0.92f, 1f, 1f));
         SetPreferredHeight(_prTemplateLabel.gameObject, 22f);
 
         var pickRow = CreateUiObject("PickRow", sbInner.transform);
         var pickLayout = pickRow.AddComponent<HorizontalLayoutGroup>();
-        pickLayout.spacing = 6f; pickLayout.childControlWidth = true; pickLayout.childForceExpandWidth = true;
-        pickLayout.childControlHeight = true; pickLayout.childForceExpandHeight = true;
+        pickLayout.spacing = 6f;
+        pickLayout.childControlWidth = true;
+        pickLayout.childForceExpandWidth = true;
+        pickLayout.childControlHeight = true;
+        pickLayout.childForceExpandHeight = true;
         SetPreferredHeight(pickRow, 34f);
-        BuildButton(pickRow.transform, "<", () => { CycleTemplate(-1); RefreshPlanRacks(); }, 40f);
-        BuildButton(pickRow.transform, ">", () => { CycleTemplate(1); RefreshPlanRacks(); }, 40f);
+        BuildButton(pickRow.transform, "<", () =>
+        {
+            CycleTemplate(-1);
+            RefreshPlanRacks();
+        }, 40f);
+        BuildButton(pickRow.transform, ">", () =>
+        {
+            CycleTemplate(1);
+            RefreshPlanRacks();
+        }, 40f);
 
         var actions = CreateUiObject("Actions", sbInner.transform);
         var actLayout = actions.AddComponent<VerticalLayoutGroup>();
-        actLayout.spacing = 4f; actLayout.childControlWidth = true; actLayout.childForceExpandWidth = true;
-        actLayout.childControlHeight = true; actLayout.childForceExpandHeight = false;
+        actLayout.spacing = 4f;
+        actLayout.childControlWidth = true;
+        actLayout.childForceExpandWidth = true;
+        actLayout.childControlHeight = true;
+        actLayout.childForceExpandHeight = false;
         SetFlexibleHeight(actions, 1f);
 
         BuildButton(actions.transform, "Paste Template", () =>
         {
             var t = GetSelectedPlanTemplate();
-            if (t == null) { _prStatus.text = "No template selected."; return; }
+            if (t == null)
+            {
+                _prStatus.text = "No template selected.";
+                return;
+            }
+
             ApplyToSelectedTarget(t, $"Template {t.Name}");
         }, 0f);
         BuildButton(actions.transform, "Paste from Clipboard", () =>
         {
-            if (RackPlannerService.Clipboard == null) { _prStatus.text = "Clipboard is empty."; return; }
+            if (RackPlannerService.Clipboard == null)
+            {
+                _prStatus.text = "Clipboard is empty.";
+                return;
+            }
+
             ApplyToSelectedTarget(RackPlannerService.Clipboard, "Clipboard");
         }, 0f);
         BuildButton(actions.transform, "Buy New Rack (here)", () =>
         {
-            var pos = PlayerManager.instance?.playerClass?.transform?.position ?? Vector3.zero;
+            var pos = PlayerManager.instance?.playerClass?.transform.position ?? Vector3.zero;
             if (RackPlannerService.TryBuyAndPlaceRack(pos, out var msg))
                 _prStatus.text = msg;
             else
                 _prStatus.text = "Purchase failed: " + msg;
             RefreshPlanRacks();
         }, 0f);
-        BuildButton(actions.transform, "Refresh", () => RefreshPlanRacks(), 0f);
+        BuildButton(actions.transform, "Refresh", RefreshPlanRacks, 0f);
 
-        AddBackButton(page.transform, _prHeader.transform.parent);
-        AddZoomButtons(_prHeader.transform.parent, () => _prZoom, v => { _prZoom = v; RefreshPlanRacks(); });
-        AttachMouseWheelZoom(floorScroll, () => _prZoom, v => { _prZoom = v; RefreshPlanRacks(); });
+        AddBackButton(_prHeader.transform.parent);
+        AddZoomButtons(_prHeader.transform.parent, () => _prZoom, v =>
+        {
+            _prZoom = v;
+            RefreshPlanRacks();
+        });
+        AttachMouseWheelZoom(floorScroll, () => _prZoom, v =>
+        {
+            _prZoom = v;
+            RefreshPlanRacks();
+        });
         return page;
     }
 
     private void CycleTemplate(int delta)
     {
         if (_templates.Count == 0) return;
-        _planTemplateIndex = _planTemplateIndex < 0 ? 0 : (_planTemplateIndex + delta + _templates.Count) % _templates.Count;
+        _planTemplateIndex = _planTemplateIndex < 0
+            ? 0
+            : (_planTemplateIndex + delta + _templates.Count) % _templates.Count;
     }
 
     private RackTemplate GetSelectedPlanTemplate() =>
@@ -407,10 +494,16 @@ internal sealed class RackPlannerScreenController
 
     private void ApplyToSelectedTarget(RackTemplate template, string description)
     {
-        if (_planRacksSelectedRack == null) { _prStatus.text = "No target rack selected."; return; }
+        if (_planRacksSelectedRack == null)
+        {
+            _prStatus.text = "No target rack selected.";
+            return;
+        }
+
         var result = RackPlannerService.ApplyTemplate(template, _planRacksSelectedRack);
-        _prStatus.text = $"{description}: {result.SpawnedCount} devices, {result.CablesCreated} cables, cost {result.ChargedAmount}.\n"
-                       + string.Join("\n", result.Messages.Take(4));
+        _prStatus.text =
+            $"{description}: {result.SpawnedCount} devices, {result.CablesCreated} cables, cost {result.ChargedAmount}.\n"
+            + string.Join("\n", result.Messages.Take(4));
         RefreshPlanRacks();
     }
 
@@ -437,6 +530,7 @@ internal sealed class RackPlannerScreenController
                     _prStatus.text = $"{r.Label} is occupied – not a valid paste target.";
                     return;
                 }
+
                 _planRacksSelectedRack = r;
                 RefreshPlanRacks();
             },
@@ -465,7 +559,8 @@ internal sealed class RackPlannerScreenController
         Stretch(page.GetComponent<RectTransform>());
 
         // Layout: header at top, body Horizontal: left list (sidebar) + right preview
-        var (mainArea, leftPanel) = BuildPageWithSidebar(page.transform, "View Templates", out _vtHeader, out _vtStatus, sidebarOnLeft: true, sidebarWidth: 220f);
+        var (mainArea, leftPanel) = BuildPageWithSidebar(page.transform, "View Templates", out _vtHeader, out _vtStatus,
+            sidebarOnLeft: true, sidebarWidth: 220f);
 
         // Sidebar = list of templates
         var sbInner = BuildContainer(leftPanel.transform, -1f);
@@ -474,12 +569,21 @@ internal sealed class RackPlannerScreenController
         SetFlexibleHeight(listScroll, 1f);
         var rowBtns = CreateUiObject("Row", sbInner.transform);
         var rl = rowBtns.AddComponent<HorizontalLayoutGroup>();
-        rl.spacing = 4f; rl.childControlWidth = true; rl.childForceExpandWidth = true; rl.childControlHeight = true; rl.childForceExpandHeight = true;
+        rl.spacing = 4f;
+        rl.childControlWidth = true;
+        rl.childForceExpandWidth = true;
+        rl.childControlHeight = true;
+        rl.childForceExpandHeight = true;
         SetPreferredHeight(rowBtns, 34f);
         BuildButton(rowBtns.transform, "Refresh", () => RefreshViewTemplates(), 0f);
         BuildButton(rowBtns.transform, "Delete", () =>
         {
-            if (_vtSelectedIndex < 0 || _vtSelectedIndex >= _templates.Count) { _vtStatus.text = "No template selected."; return; }
+            if (_vtSelectedIndex < 0 || _vtSelectedIndex >= _templates.Count)
+            {
+                _vtStatus.text = "No template selected.";
+                return;
+            }
+
             var name = _templates[_vtSelectedIndex].Name;
             RackPlannerService.DeleteTemplate(_templates, _vtSelectedIndex);
             _vtStatus.text = $"Template deleted: {name}";
@@ -497,7 +601,7 @@ internal sealed class RackPlannerScreenController
         var prevScroll = BuildScrollRegion(mainArea.transform, out _vtPreviewContent, 0f, false, true, true);
         SetFlexibleHeight(prevScroll, 1f);
 
-        AddBackButton(page.transform, _vtHeader.transform.parent);
+        AddBackButton(_vtHeader.transform.parent);
         return page;
     }
 
@@ -509,7 +613,8 @@ internal sealed class RackPlannerScreenController
         ClearChildren(_vtListContent.transform);
         if (_templates.Count == 0)
         {
-            BuildLabel(_vtListContent.transform, "No templates available.", 14f, TextAlignmentOptions.Center, new Color(0.85f, 0.9f, 1f, 1f));
+            BuildLabel(_vtListContent.transform, "No templates available.", 14f, TextAlignmentOptions.Center,
+                new Color(0.85f, 0.9f, 1f, 1f));
         }
         else
         {
@@ -520,7 +625,9 @@ internal sealed class RackPlannerScreenController
                 var row = CreateUiObject($"TplRow_{i}", _vtListContent.transform);
                 SetPreferredHeight(row, 56f);
                 var img = row.AddComponent<Image>();
-                img.color = idx == _vtSelectedIndex ? new Color(0.18f, 0.36f, 0.56f, 1f) : new Color(0.13f, 0.16f, 0.22f, 1f);
+                img.color = idx == _vtSelectedIndex
+                    ? new Color(0.18f, 0.36f, 0.56f, 1f)
+                    : new Color(0.13f, 0.16f, 0.22f, 1f);
                 var b = row.AddComponent<Button>();
                 b.targetGraphic = img;
                 ConfigureButtonColors(b, img.color);
@@ -529,13 +636,21 @@ internal sealed class RackPlannerScreenController
                 b.navigation = new Navigation { mode = Navigation.Mode.None };
                 b.onClick.AddListener(DelegateSupport.ConvertDelegate<UnityAction>(() =>
                 {
-                    try { _vtSelectedIndex = idx; RefreshViewTemplates(); }
-                    finally { if (EventSystem.current != null) EventSystem.current.SetSelectedGameObject(null); }
+                    try
+                    {
+                        _vtSelectedIndex = idx;
+                        RefreshViewTemplates();
+                    }
+                    finally
+                    {
+                        if (EventSystem.current != null) EventSystem.current.SetSelectedGameObject(null);
+                    }
                 }));
 
                 var n = BuildLabel(row.transform, t.Name, 14f, TextAlignmentOptions.TopLeft, Color.white);
                 Stretch(n.rectTransform, new Vector2(8f, 26f), new Vector2(-8f, -4f));
-                var sub = BuildLabel(row.transform, $"{t.Devices.Count} devices · {t.Cables.Count} cables", 11f, TextAlignmentOptions.BottomLeft, new Color(0.78f, 0.86f, 0.98f, 1f));
+                var sub = BuildLabel(row.transform, $"{t.Devices.Count} devices · {t.Cables.Count} cables", 11f,
+                    TextAlignmentOptions.BottomLeft, new Color(0.78f, 0.86f, 0.98f, 1f));
                 Stretch(sub.rectTransform, new Vector2(8f, 4f), new Vector2(-8f, -28f));
             }
         }
@@ -549,7 +664,8 @@ internal sealed class RackPlannerScreenController
     // ============================================================================
 
     /// <summary>Floor map with X-axis flipped horizontally (newest racks on the right).</summary>
-    private void RenderFloorMap(GameObject content, IList<RackRuntimeInfo> racks, Action<RackRuntimeInfo> onClick, RackRuntimeInfo selected, float zoom = 1f, Predicate<RackRuntimeInfo> isInvalid = null)
+    private void RenderFloorMap(GameObject content, IList<RackRuntimeInfo> racks, Action<RackRuntimeInfo> onClick,
+        RackRuntimeInfo selected, float zoom = 1f, Predicate<RackRuntimeInfo> isInvalid = null)
     {
         ClearChildren(content.transform);
         var contentRect = content.GetComponent<RectTransform>();
@@ -594,8 +710,12 @@ internal sealed class RackPlannerScreenController
         // the X axis usually has many racks per row, providing a tight baseline that
         // we can apply to the Z axis too.
         var baseline = float.PositiveInfinity;
-        foreach (var d in xDeltas) if (d > 0.001f && d < baseline) baseline = d;
-        foreach (var d in zDeltas) if (d > 0.001f && d < baseline) baseline = d;
+        foreach (var d in xDeltas)
+            if (d > 0.001f && d < baseline)
+                baseline = d;
+        foreach (var d in zDeltas)
+            if (d > 0.001f && d < baseline)
+                baseline = d;
         if (float.IsPositiveInfinity(baseline) || baseline <= 0.001f) baseline = 1f;
         var corridorThreshold = baseline * corridorMultiplier;
 
@@ -672,8 +792,14 @@ internal sealed class RackPlannerScreenController
             var rackRef = rack;
             btn.onClick.AddListener(DelegateSupport.ConvertDelegate<UnityAction>(() =>
             {
-                try { onClick(rackRef); }
-                finally { if (EventSystem.current != null) EventSystem.current.SetSelectedGameObject(null); }
+                try
+                {
+                    onClick(rackRef);
+                }
+                finally
+                {
+                    if (EventSystem.current != null) EventSystem.current.SetSelectedGameObject(null);
+                }
             }));
 
             // Smaller, more readable labels – the previous sizes scaled with zoom and ended
@@ -684,7 +810,8 @@ internal sealed class RackPlannerScreenController
             ttl.enableWordWrapping = false;
             ttl.overflowMode = TextOverflowModes.Ellipsis;
             Stretch(ttl.rectTransform, new Vector2(2f, tileH * 0.45f), new Vector2(-2f, -2f));
-            var sub = BuildLabel(tile.transform, $"{rack.UsedSlots}/{rack.TotalSlots}U", subSize, TextAlignmentOptions.Center, new Color(1f, 1f, 1f, 0.9f));
+            var sub = BuildLabel(tile.transform, $"{rack.UsedSlots}/{rack.TotalSlots}U", subSize,
+                TextAlignmentOptions.Center, new Color(1f, 1f, 1f, 0.9f));
             sub.enableWordWrapping = false;
             Stretch(sub.rectTransform, new Vector2(2f, 2f), new Vector2(-2f, -tileH * 0.55f));
         }
@@ -705,7 +832,7 @@ internal sealed class RackPlannerScreenController
 
         foreach (var v in sorted)
         {
-            if (centres.Count == 0 || v - centres[centres.Count - 1] > tolerance)
+            if (centres.Count == 0 || v - centres[^1] > tolerance)
             {
                 centres.Add(v);
                 clusterSums.Add(v);
@@ -736,6 +863,7 @@ internal sealed class RackPlannerScreenController
         {
             if (centres[i] - centres[i - 1] > threshold) corridor[i] = true;
         }
+
         return corridor;
     }
 
@@ -755,8 +883,10 @@ internal sealed class RackPlannerScreenController
                 x += cellStep;
                 if (i < corridorBefore.Length && corridorBefore[i]) x += corridorExtra;
             }
+
             offsets[i] = x;
         }
+
         return offsets;
     }
 
@@ -768,8 +898,13 @@ internal sealed class RackPlannerScreenController
         for (var i = 1; i < centres.Count; i++)
         {
             var d = Mathf.Abs(value - centres[i]);
-            if (d < bestDist) { bestDist = d; bestIdx = i; }
+            if (d < bestDist)
+            {
+                bestDist = d;
+                bestIdx = i;
+            }
         }
+
         return bestIdx;
     }
 
@@ -778,12 +913,14 @@ internal sealed class RackPlannerScreenController
         ClearChildren(content.transform);
         if (rack == null)
         {
-            BuildLabel(content.transform, "No rack selected.", 14f, TextAlignmentOptions.Center, new Color(0.85f, 0.9f, 1f, 1f));
+            BuildLabel(content.transform, "No rack selected.", 14f, TextAlignmentOptions.Center,
+                new Color(0.85f, 0.9f, 1f, 1f));
             return;
         }
 
         BuildSectionTitle(content.transform, rack.Label);
-        BuildLabel(content.transform, $"Occupancy: {rack.UsedSlots}/{rack.TotalSlots} U", 13f, TextAlignmentOptions.Left, new Color(0.85f, 0.9f, 1f, 1f));
+        BuildLabel(content.transform, $"Occupancy: {rack.UsedSlots}/{rack.TotalSlots} U", 13f,
+            TextAlignmentOptions.Left, new Color(0.85f, 0.9f, 1f, 1f));
         BuildLabel(content.transform, $"Devices: {rack.Devices.Count}", 13f, TextAlignmentOptions.Left, Color.white);
         BuildDivider(content.transform);
 
@@ -819,6 +956,7 @@ internal sealed class RackPlannerScreenController
                 text = $"U{slot + 1:00}  {ShortDeviceType(d.Kind)} · {name}";
                 color = GetDeviceColor(d.Kind);
             }
+
             BuildPill(content.transform, text, color, -1f);
         }
     }
@@ -828,23 +966,31 @@ internal sealed class RackPlannerScreenController
         ClearChildren(content.transform);
         if (template == null)
         {
-            BuildLabel(content.transform, "Select a template on the left to see the preview.", 16f, TextAlignmentOptions.Center, new Color(0.85f, 0.9f, 1f, 1f));
+            BuildLabel(content.transform, "Select a template on the left to see the preview.", 16f,
+                TextAlignmentOptions.Center, new Color(0.85f, 0.9f, 1f, 1f));
             return;
         }
 
         BuildSectionTitle(content.transform, template.Name);
-        BuildLabel(content.transform, $"Created: {template.CreatedUtc}", 12f, TextAlignmentOptions.Left, new Color(0.7f, 0.78f, 0.92f, 1f));
-        BuildLabel(content.transform, $"Source: {template.SourceRackLabel}", 13f, TextAlignmentOptions.Left, Color.white);
+        BuildLabel(content.transform, $"Created: {template.CreatedUtc}", 12f, TextAlignmentOptions.Left,
+            new Color(0.7f, 0.78f, 0.92f, 1f));
+        BuildLabel(content.transform, $"Source: {template.SourceRackLabel}", 13f, TextAlignmentOptions.Left,
+            Color.white);
 
         // Price estimate block
         var price = RackPlannerService.EstimatePrice(template);
         BuildDivider(content.transform);
         BuildSectionTitle(content.transform, "Price Estimate");
-        BuildLabel(content.transform, $"Devices (base): {price.DeviceBase}", 13f, TextAlignmentOptions.Left, Color.white);
-        BuildLabel(content.transform, $"Devices (1.5x): {price.DeviceAdjusted}", 13f, TextAlignmentOptions.Left, new Color(1f, 0.84f, 0.44f, 1f));
-        BuildLabel(content.transform, $"Cables: {price.CableLength:0.0} m  →  {price.CablePrice}", 13f, TextAlignmentOptions.Left, new Color(0.74f, 0.92f, 0.74f, 1f));
-        BuildLabel(content.transform, $"SFP+ Modules: {price.SfpCount}  →  {price.SfpPrice}", 13f, TextAlignmentOptions.Left, new Color(0.74f, 0.86f, 1f, 1f));
-        BuildLabel(content.transform, $"Total: {price.Total}", 16f, TextAlignmentOptions.Left, new Color(1f, 0.92f, 0.62f, 1f));
+        BuildLabel(content.transform, $"Devices (base): {price.DeviceBase}", 13f, TextAlignmentOptions.Left,
+            Color.white);
+        BuildLabel(content.transform, $"Devices (1.5x): {price.DeviceAdjusted}", 13f, TextAlignmentOptions.Left,
+            new Color(1f, 0.84f, 0.44f, 1f));
+        BuildLabel(content.transform, $"Cables: {price.CableLength:0.0} m  →  {price.CablePrice}", 13f,
+            TextAlignmentOptions.Left, new Color(0.74f, 0.92f, 0.74f, 1f));
+        BuildLabel(content.transform, $"SFP+ Modules: {price.SfpCount}  →  {price.SfpPrice}", 13f,
+            TextAlignmentOptions.Left, new Color(0.74f, 0.86f, 1f, 1f));
+        BuildLabel(content.transform, $"Total: {price.Total}", 16f, TextAlignmentOptions.Left,
+            new Color(1f, 0.92f, 0.62f, 1f));
 
         // Blueprint: visual rack column with sized device blocks
         BuildDivider(content.transform);
@@ -861,10 +1007,14 @@ internal sealed class RackPlannerScreenController
                 var aName = template.Devices.ElementAtOrDefault(c.EndA.DeviceIndex)?.DisplayName ?? "?";
                 var bName = template.Devices.ElementAtOrDefault(c.EndB.DeviceIndex)?.DisplayName ?? "?";
                 var sfp = c.SfpCount > 0 ? $" · SFP×{c.SfpCount}" : string.Empty;
-                BuildLabel(content.transform, $"{aName}:p{c.EndA.PortIndex} ↔ {bName}:p{c.EndB.PortIndex}  ({c.Length:0.0}m{sfp})", 12f, TextAlignmentOptions.Left, new Color(0.86f, 0.92f, 1f, 1f));
+                BuildLabel(content.transform,
+                    $"{aName}:p{c.EndA.PortIndex} ↔ {bName}:p{c.EndB.PortIndex}  ({c.Length:0.0}m{sfp})", 12f,
+                    TextAlignmentOptions.Left, new Color(0.86f, 0.92f, 1f, 1f));
             }
+
             if (template.Cables.Count > 40)
-                BuildLabel(content.transform, $"… {template.Cables.Count - 40} more", 12f, TextAlignmentOptions.Left, new Color(0.7f, 0.78f, 0.92f, 1f));
+                BuildLabel(content.transform, $"… {template.Cables.Count - 40} more", 12f, TextAlignmentOptions.Left,
+                    new Color(0.7f, 0.78f, 0.92f, 1f));
         }
     }
 
@@ -881,7 +1031,8 @@ internal sealed class RackPlannerScreenController
 
         var occ = new RackDeviceTemplate[totalSlots];
         foreach (var d in template.Devices)
-            for (var s = Math.Max(0, d.StartIndex); s < Math.Min(totalSlots, d.StartIndex + DeviceSize(d)); s++) occ[s] = d;
+            for (var s = Math.Max(0, d.StartIndex); s < Math.Min(totalSlots, d.StartIndex + DeviceSize(d)); s++)
+                occ[s] = d;
 
         var rack = CreateUiObject("Blueprint", parent);
         var img = rack.AddComponent<Image>();
@@ -906,7 +1057,12 @@ internal sealed class RackPlannerScreenController
             var rowImg = row.AddComponent<Image>();
             rowImg.color = d == null ? new Color(0.10f, 0.12f, 0.15f, 1f) : GetDeviceColor(d.Kind);
 
-            var lbl = BuildLabel(row.transform, d == null ? $"U{slot + 1:00} – empty" : (slot == d.StartIndex + DeviceSize(d) - 1 ? $"U{slot + 1:00}  {ShortDeviceType(d.Kind)} {d.DisplayName}" : $"U{slot + 1:00}  …"), 11f, TextAlignmentOptions.MidlineLeft, Color.white);
+            var lbl = BuildLabel(row.transform,
+                d == null
+                    ? $"U{slot + 1:00} – empty"
+                    : (slot == d.StartIndex + DeviceSize(d) - 1
+                        ? $"U{slot + 1:00}  {ShortDeviceType(d.Kind)} {d.DisplayName}"
+                        : $"U{slot + 1:00}  …"), 11f, TextAlignmentOptions.MidlineLeft, Color.white);
             Stretch(lbl.rectTransform, new Vector2(8f, 1f), new Vector2(-4f, -1f));
         }
     }
@@ -915,7 +1071,8 @@ internal sealed class RackPlannerScreenController
     // PAGE-WITH-SIDEBAR FRAME
     // ============================================================================
 
-    private (GameObject mainArea, GameObject sidebar) BuildPageWithSidebar(Transform parent, string title, out TextMeshProUGUI header, out TextMeshProUGUI status, bool sidebarOnLeft = false, float sidebarWidth = 220f)
+    private (GameObject mainArea, GameObject sidebar) BuildPageWithSidebar(Transform parent, string title,
+        out TextMeshProUGUI header, out TextMeshProUGUI status, bool sidebarOnLeft = false, float sidebarWidth = 220f)
     {
         var page = CreateUiObject("Page", parent);
         Stretch(page.GetComponent<RectTransform>());
@@ -925,16 +1082,25 @@ internal sealed class RackPlannerScreenController
         var col = CreateUiObject("Col", page.transform);
         Stretch(col.GetComponent<RectTransform>());
         var colLayout = col.AddComponent<VerticalLayoutGroup>();
-        var pad = new RectOffset(); pad.left = 14; pad.right = 14; pad.top = 10; pad.bottom = 12;
+        var pad = new RectOffset();
+        pad.left = 14;
+        pad.right = 14;
+        pad.top = 10;
+        pad.bottom = 12;
         colLayout.padding = pad;
         colLayout.spacing = 8f;
-        colLayout.childControlWidth = true; colLayout.childForceExpandWidth = true;
-        colLayout.childControlHeight = true; colLayout.childForceExpandHeight = false;
+        colLayout.childControlWidth = true;
+        colLayout.childForceExpandWidth = true;
+        colLayout.childControlHeight = true;
+        colLayout.childForceExpandHeight = false;
 
         // Header
         var headerRow = CreateUiObject("Header", col.transform);
         var hl = headerRow.AddComponent<HorizontalLayoutGroup>();
-        hl.spacing = 10f; hl.childControlWidth = true; hl.childForceExpandWidth = true; hl.childControlHeight = true;
+        hl.spacing = 10f;
+        hl.childControlWidth = true;
+        hl.childForceExpandWidth = true;
+        hl.childControlHeight = true;
         SetPreferredHeight(headerRow, 38f);
         header = BuildLabel(headerRow.transform, title, 22f, TextAlignmentOptions.MidlineLeft, Color.white);
         SetFlexibleWidth(header.gameObject, 1f);
@@ -945,8 +1111,11 @@ internal sealed class RackPlannerScreenController
         // gives us a guaranteed 75% / 25% split (main / sidebar) regardless of screen size.
         var body = CreateUiObject("Body", col.transform);
         var bl = body.AddComponent<HorizontalLayoutGroup>();
-        bl.spacing = 10f; bl.childControlWidth = true; bl.childForceExpandWidth = true;
-        bl.childControlHeight = true; bl.childForceExpandHeight = true;
+        bl.spacing = 10f;
+        bl.childControlWidth = true;
+        bl.childForceExpandWidth = true;
+        bl.childControlHeight = true;
+        bl.childForceExpandHeight = true;
         SetFlexibleHeight(body, 1f);
         SetPreferredHeight(body, 600f);
 
@@ -971,31 +1140,42 @@ internal sealed class RackPlannerScreenController
         var mImg = mainArea.AddComponent<Image>();
         mImg.color = new Color(0.10f, 0.12f, 0.15f, 1f);
         var mLayout = mainArea.AddComponent<VerticalLayoutGroup>();
-        var mPad = new RectOffset(); mPad.left = 8; mPad.right = 8; mPad.top = 8; mPad.bottom = 8;
+        var mPad = new RectOffset();
+        mPad.left = 8;
+        mPad.right = 8;
+        mPad.top = 8;
+        mPad.bottom = 8;
         mLayout.padding = mPad;
-        mLayout.childControlWidth = true; mLayout.childForceExpandWidth = true;
-        mLayout.childControlHeight = true; mLayout.childForceExpandHeight = false;
+        mLayout.childControlWidth = true;
+        mLayout.childForceExpandWidth = true;
+        mLayout.childControlHeight = true;
+        mLayout.childForceExpandHeight = false;
 
         var sImg = sidebar.AddComponent<Image>();
         sImg.color = new Color(0.10f, 0.12f, 0.15f, 1f);
         var sLayout = sidebar.AddComponent<VerticalLayoutGroup>();
-        var sPad = new RectOffset(); sPad.left = 8; sPad.right = 8; sPad.top = 8; sPad.bottom = 8;
+        var sPad = new RectOffset();
+        sPad.left = 8;
+        sPad.right = 8;
+        sPad.top = 8;
+        sPad.bottom = 8;
         sLayout.padding = sPad;
-        sLayout.childControlWidth = true; sLayout.childForceExpandWidth = true;
-        sLayout.childControlHeight = true; sLayout.childForceExpandHeight = false;
+        sLayout.childControlWidth = true;
+        sLayout.childForceExpandWidth = true;
+        sLayout.childControlHeight = true;
+        sLayout.childForceExpandHeight = false;
 
         // Status bar at the bottom of the column
-        status = BuildLabel(col.transform, string.Empty, 13f, TextAlignmentOptions.TopLeft, new Color(0.92f, 0.95f, 1f, 1f));
+        status = BuildLabel(col.transform, string.Empty, 13f, TextAlignmentOptions.TopLeft,
+            new Color(0.92f, 0.95f, 1f, 1f));
         status.enableWordWrapping = true;
         SetPreferredHeight(status.gameObject, 36f);
 
         return (mainArea, sidebar);
     }
 
-    private void AddBackButton(Transform pageRoot, Transform headerRow)
+    private void AddBackButton(Transform headerRow)
     {
-        // Header was the first child, find it
-        // Insert at end of header row
         BuildButton(headerRow, "← Back", () => ShowPage(Page.Main), 110f);
     }
 
@@ -1004,11 +1184,10 @@ internal sealed class RackPlannerScreenController
         // Inserted before the back button. We add them after the back button creation
         // (so they appear to its left because layout group orders by sibling index — back
         // is added first, so place these and reorder).
-        var minus = BuildButton(headerRow, "−", () => setZoom(Mathf.Clamp(getZoom() / 1.25f, MinZoom, MaxZoom)), 36f);
-        var reset = BuildButton(headerRow, "1×", () => setZoom(1f), 36f);
-        var plus = BuildButton(headerRow, "+", () => setZoom(Mathf.Clamp(getZoom() * 1.25f, MinZoom, MaxZoom)), 36f);
+        BuildButton(headerRow, "−", () => setZoom(Mathf.Clamp(getZoom() / 1.25f, MinZoom, MaxZoom)), 36f);
+        BuildButton(headerRow, "1×", () => setZoom(1f), 36f);
+        BuildButton(headerRow, "+", () => setZoom(Mathf.Clamp(getZoom() * 1.25f, MinZoom, MaxZoom)), 36f);
         // Make sure these sit just before the back button (which is currently last).
-        var backIndex = headerRow.childCount - 4; // back is at last; minus,reset,plus were added before it? no — added after. We added these after AddBackButton was called, so back-button is at index N-4.
         // Reorder: put zoom buttons immediately before the last child (back button).
         var backButton = headerRow.GetChild(headerRow.childCount - 4);
         backButton.SetSiblingIndex(headerRow.childCount - 1);
@@ -1033,8 +1212,13 @@ internal sealed class RackPlannerScreenController
         for (var i = 0; i < scrollRoot.transform.childCount; i++)
         {
             var ch = scrollRoot.transform.GetChild(i);
-            if (ch != null && ch.name == "Viewport") { viewport = ch; break; }
+            if (ch != null && ch.name == "Viewport")
+            {
+                viewport = ch;
+                break;
+            }
         }
+
         if (viewport == null) return;
 
         WheelZoomBehaviour.EnsureRegistered();
@@ -1049,7 +1233,10 @@ internal sealed class RackPlannerScreenController
                 var newZoom = Mathf.Clamp(getZoom() * factor, MinZoom, MaxZoom);
                 setZoom(newZoom);
             }
-            catch (Exception ex) { MelonLoader.MelonLogger.Warning($"Zoom error: {ex.Message}"); }
+            catch (Exception ex)
+            {
+                MelonLoader.MelonLogger.Warning($"Zoom error: {ex.Message}");
+            }
         };
     }
 
@@ -1077,9 +1264,17 @@ internal sealed class RackPlannerScreenController
         bOl.effectColor = new Color(0.4f, 0.55f, 0.78f, 0.6f);
         bOl.effectDistance = new Vector2(2f, -2f);
         var bL = box.AddComponent<VerticalLayoutGroup>();
-        var bp = new RectOffset(); bp.left = 18; bp.right = 18; bp.top = 18; bp.bottom = 18;
-        bL.padding = bp; bL.spacing = 10f;
-        bL.childControlWidth = true; bL.childForceExpandWidth = true;
+        var bp = new RectOffset
+        {
+            left = 18,
+            right = 18,
+            top = 18,
+            bottom = 18
+        };
+        bL.padding = bp;
+        bL.spacing = 10f;
+        bL.childControlWidth = true;
+        bL.childForceExpandWidth = true;
 
         _modalPrompt = BuildLabel(box.transform, "Input:", 18f, TextAlignmentOptions.Left, Color.white);
         SetPreferredHeight(_modalPrompt.gameObject, 28f);
@@ -1096,29 +1291,51 @@ internal sealed class RackPlannerScreenController
         var textGo = CreateUiObject("Text", textArea.transform);
         Stretch(textGo.GetComponent<RectTransform>());
         var textTmp = textGo.AddComponent<TextMeshProUGUI>();
-        textTmp.fontSize = 16f; textTmp.color = Color.white; textTmp.alignment = TextAlignmentOptions.MidlineLeft;
+        textTmp.fontSize = 16f;
+        textTmp.color = Color.white;
+        textTmp.alignment = TextAlignmentOptions.MidlineLeft;
         var ph = CreateUiObject("Placeholder", textArea.transform);
         Stretch(ph.GetComponent<RectTransform>());
         var phTmp = ph.AddComponent<TextMeshProUGUI>();
-        phTmp.fontSize = 16f; phTmp.color = new Color(0.6f, 0.65f, 0.75f, 1f); phTmp.alignment = TextAlignmentOptions.MidlineLeft; phTmp.text = "Name…";
+        phTmp.fontSize = 16f;
+        phTmp.color = new Color(0.6f, 0.65f, 0.75f, 1f);
+        phTmp.alignment = TextAlignmentOptions.MidlineLeft;
+        phTmp.text = "Name…";
         _modalInput.textViewport = textArea.GetComponent<RectTransform>();
         _modalInput.textComponent = textTmp;
         _modalInput.placeholder = phTmp;
 
         var row = CreateUiObject("Row", box.transform);
         var rl = row.AddComponent<HorizontalLayoutGroup>();
-        rl.spacing = 8f; rl.childControlWidth = true; rl.childForceExpandWidth = true; rl.childControlHeight = true; rl.childForceExpandHeight = true;
+        rl.spacing = 8f;
+        rl.childControlWidth = true;
+        rl.childForceExpandWidth = true;
+        rl.childControlHeight = true;
+        rl.childForceExpandHeight = true;
         SetPreferredHeight(row, 40f);
         BuildButton(row.transform, "Cancel", CloseModal, 0f);
         BuildButton(row.transform, "OK", () =>
         {
             string text = string.Empty;
-            try { text = _modalInput != null ? _modalInput.text ?? string.Empty : string.Empty; }
-            catch (Exception ex) { MelonLoader.MelonLogger.Warning($"Modal read failed: {ex.Message}"); }
+            try
+            {
+                text = _modalInput != null ? _modalInput.text ?? string.Empty : string.Empty;
+            }
+            catch (Exception ex)
+            {
+                MelonLoader.MelonLogger.Warning($"Modal read failed: {ex.Message}");
+            }
+
             var cb = _modalCallback;
             CloseModal();
-            try { cb?.Invoke(text); }
-            catch (Exception ex) { MelonLoader.MelonLogger.Error($"Modal callback failed: {ex}"); }
+            try
+            {
+                cb?.Invoke(text);
+            }
+            catch (Exception ex)
+            {
+                MelonLoader.MelonLogger.Error($"Modal callback failed: {ex}");
+            }
         }, 0f);
 
         return modal;
@@ -1140,7 +1357,10 @@ internal sealed class RackPlannerScreenController
             if (_modalPrompt != null) _modalPrompt.text = prompt;
             if (_modalInput != null)
             {
-                try { _modalInput.text = defaultValue ?? string.Empty; }
+                try
+                {
+                    _modalInput.text = defaultValue ?? string.Empty;
+                }
                 catch (Exception inner)
                 {
                     MelonLoader.MelonLogger.Warning($"Modal input init failed: {inner.Message}");
@@ -1162,9 +1382,6 @@ internal sealed class RackPlannerScreenController
     // ============================================================================
     // GENERIC HELPERS
     // ============================================================================
-
-    private static float Normalize(float value, float min, float max) =>
-        Mathf.Abs(max - min) < 0.001f ? 0.5f : (value - min) / (max - min);
 
     private static string ShortDeviceType(RackDeviceKind kind) => kind switch
     {
@@ -1188,11 +1405,19 @@ internal sealed class RackPlannerScreenController
         var img = c.AddComponent<Image>();
         img.color = new Color(0.10f, 0.12f, 0.16f, 1f);
         var l = c.AddComponent<VerticalLayoutGroup>();
-        var p = new RectOffset(); p.left = 8; p.right = 8; p.top = 8; p.bottom = 8;
-        l.padding = p; l.spacing = 6f;
-        l.childControlWidth = true; l.childForceExpandWidth = true;
-        l.childControlHeight = true; l.childForceExpandHeight = false;
-        if (preferredHeight > 0f) SetPreferredHeight(c, preferredHeight); else SetFlexibleHeight(c, 1f);
+        var p = new RectOffset();
+        p.left = 8;
+        p.right = 8;
+        p.top = 8;
+        p.bottom = 8;
+        l.padding = p;
+        l.spacing = 6f;
+        l.childControlWidth = true;
+        l.childForceExpandWidth = true;
+        l.childControlHeight = true;
+        l.childForceExpandHeight = false;
+        if (preferredHeight > 0f) SetPreferredHeight(c, preferredHeight);
+        else SetFlexibleHeight(c, 1f);
         return c;
     }
 
@@ -1232,6 +1457,7 @@ internal sealed class RackPlannerScreenController
             crt.anchorMax = new Vector2(0f, 1f);
             crt.pivot = new Vector2(0f, 0.5f);
         }
+
         crt.sizeDelta = Vector2.zero;
         crt.anchoredPosition = Vector2.zero;
 
@@ -1241,8 +1467,10 @@ internal sealed class RackPlannerScreenController
             {
                 var vlg = content.AddComponent<VerticalLayoutGroup>();
                 vlg.spacing = 4f;
-                vlg.childControlWidth = true; vlg.childForceExpandWidth = true;
-                vlg.childControlHeight = true; vlg.childForceExpandHeight = false;
+                vlg.childControlWidth = true;
+                vlg.childForceExpandWidth = true;
+                vlg.childControlHeight = true;
+                vlg.childForceExpandHeight = false;
                 var f = content.AddComponent<ContentSizeFitter>();
                 f.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
                 f.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
@@ -1251,8 +1479,10 @@ internal sealed class RackPlannerScreenController
             {
                 var hlg = content.AddComponent<HorizontalLayoutGroup>();
                 hlg.spacing = 6f;
-                hlg.childControlWidth = false; hlg.childForceExpandWidth = false;
-                hlg.childControlHeight = true; hlg.childForceExpandHeight = true;
+                hlg.childControlWidth = false;
+                hlg.childForceExpandWidth = false;
+                hlg.childControlHeight = true;
+                hlg.childForceExpandHeight = true;
                 var f = content.AddComponent<ContentSizeFitter>();
                 f.horizontalFit = ContentSizeFitter.FitMode.PreferredSize;
                 f.verticalFit = ContentSizeFitter.FitMode.Unconstrained;
@@ -1271,12 +1501,17 @@ internal sealed class RackPlannerScreenController
         return scrollRoot;
     }
 
-    private static Button BuildButton(Transform parent, string text, Action action, float width)
+    private static void BuildButton(Transform parent, string text, Action action, float width)
     {
         var bo = CreateUiObject(text.Replace(' ', '_'), parent);
         var le = bo.AddComponent<LayoutElement>();
-        if (width > 0f) { le.preferredWidth = width; le.minWidth = width; }
+        if (width > 0f)
+        {
+            le.preferredWidth = width;
+            le.minWidth = width;
+        }
         else le.flexibleWidth = 1f;
+
         le.preferredHeight = 34f;
         var img = bo.AddComponent<Image>();
         img.color = new Color(0.21f, 0.28f, 0.37f, 1f);
@@ -1288,7 +1523,10 @@ internal sealed class RackPlannerScreenController
         b.navigation = new Navigation { mode = Navigation.Mode.None };
         b.onClick.AddListener(DelegateSupport.ConvertDelegate<UnityAction>(() =>
         {
-            try { action(); }
+            try
+            {
+                action();
+            }
             finally
             {
                 // Drop selection right after the click so OnDeselect fires immediately
@@ -1298,7 +1536,6 @@ internal sealed class RackPlannerScreenController
         }));
         var lbl = BuildLabel(bo.transform, text, 14f, TextAlignmentOptions.Center, Color.white);
         Stretch(lbl.rectTransform);
-        return b;
     }
 
     private static void ConfigureButtonColors(Button b, Color baseColor)
@@ -1315,7 +1552,8 @@ internal sealed class RackPlannerScreenController
         b.colors = c;
     }
 
-    private static TextMeshProUGUI BuildLabel(Transform parent, string text, float fontSize, TextAlignmentOptions alignment, Color color)
+    private static TextMeshProUGUI BuildLabel(Transform parent, string text, float fontSize,
+        TextAlignmentOptions alignment, Color color)
     {
         var lo = CreateUiObject("Label", parent);
         var l = lo.AddComponent<TextMeshProUGUI>();
@@ -1328,11 +1566,10 @@ internal sealed class RackPlannerScreenController
         return l;
     }
 
-    private static TextMeshProUGUI BuildSectionTitle(Transform parent, string text)
+    private static void BuildSectionTitle(Transform parent, string text)
     {
         var l = BuildLabel(parent, text, 18f, TextAlignmentOptions.Left, Color.white);
         SetPreferredHeight(l.gameObject, 24f);
-        return l;
     }
 
     private static void BuildDivider(Transform parent)
@@ -1343,16 +1580,16 @@ internal sealed class RackPlannerScreenController
         SetPreferredHeight(d, 2f);
     }
 
-    private static GameObject BuildPill(Transform parent, string text, Color color, float preferredWidth)
+    private static void BuildPill(Transform parent, string text, Color color, float preferredWidth)
     {
         var p = CreateUiObject("Pill", parent);
         var i = p.AddComponent<Image>();
         i.color = color;
-        if (preferredWidth > 0f) SetPreferredWidth(p, preferredWidth); else SetFlexibleWidth(p, 1f);
+        if (preferredWidth > 0f) SetPreferredWidth(p, preferredWidth);
+        else SetFlexibleWidth(p, 1f);
         SetPreferredHeight(p, 18f);
         var lbl = BuildLabel(p.transform, text, 12f, TextAlignmentOptions.Center, Color.white);
         Stretch(lbl.rectTransform, new Vector2(6f, 1f), new Vector2(-6f, -1f));
-        return p;
     }
 
     private static void ClearChildren(Transform t)
@@ -1369,29 +1606,38 @@ internal sealed class RackPlannerScreenController
 
     private static void Stretch(RectTransform r)
     {
-        r.anchorMin = Vector2.zero; r.anchorMax = Vector2.one;
-        r.offsetMin = Vector2.zero; r.offsetMax = Vector2.zero;
+        r.anchorMin = Vector2.zero;
+        r.anchorMax = Vector2.one;
+        r.offsetMin = Vector2.zero;
+        r.offsetMax = Vector2.zero;
     }
+
     private static void Stretch(RectTransform r, Vector2 min, Vector2 max)
     {
-        r.anchorMin = Vector2.zero; r.anchorMax = Vector2.one;
-        r.offsetMin = min; r.offsetMax = max;
+        r.anchorMin = Vector2.zero;
+        r.anchorMax = Vector2.one;
+        r.offsetMin = min;
+        r.offsetMax = max;
     }
+
     private static void SetPreferredHeight(GameObject g, float v)
     {
         var le = g.GetComponent<LayoutElement>() ?? g.AddComponent<LayoutElement>();
         le.preferredHeight = v;
     }
+
     private static void SetPreferredWidth(GameObject g, float v)
     {
         var le = g.GetComponent<LayoutElement>() ?? g.AddComponent<LayoutElement>();
         le.preferredWidth = v;
     }
+
     private static void SetFlexibleWidth(GameObject g, float v)
     {
         var le = g.GetComponent<LayoutElement>() ?? g.AddComponent<LayoutElement>();
         le.flexibleWidth = v;
     }
+
     private static void SetFlexibleHeight(GameObject g, float v)
     {
         var le = g.GetComponent<LayoutElement>() ?? g.AddComponent<LayoutElement>();

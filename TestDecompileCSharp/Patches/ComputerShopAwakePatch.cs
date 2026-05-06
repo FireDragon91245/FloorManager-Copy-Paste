@@ -25,25 +25,26 @@ public static class ComputerShopAwakePatch
             var mainScreen = __instance.mainScreen;
             FloorManagerCopyPasteMod.MainScreen = mainScreen;
 
-            if (canvasComputerShop == null || mainScreen == null)
+            if (!canvasComputerShop || !mainScreen)
             {
                 MelonLogger.Warning("canvasComputerShop or mainScreen was null; button injection skipped.");
                 return;
             }
 
             var layoutGroup = mainScreen.GetComponentInChildren<LayoutGroup>();
-            if (layoutGroup == null)
+            if (!layoutGroup)
             {
                 MelonLogger.Warning("No LayoutGroup node found in the laptop main screen.");
                 return;
             }
 
-            if (layoutGroup.transform.Find(FloorManagerCopyPasteMod.FloorManagerButtonObjectName) != null)
+            if (layoutGroup.transform.Find(FloorManagerCopyPasteMod.FloorManagerButtonObjectName))
                 return;
 
             var button = BuildAppButton(layoutGroup.transform, "FLOOR");
             button.gameObject.name = FloorManagerCopyPasteMod.FloorManagerButtonObjectName;
-            button.onClick.AddListener(DelegateSupport.ConvertDelegate<UnityAction>(() => OpenFloorManagerScreen(__instance, mainScreen)));
+            button.onClick.AddListener(
+                DelegateSupport.ConvertDelegate<UnityAction>(() => OpenFloorManagerScreen(__instance, mainScreen)));
             MelonLogger.Msg("Floor Manager button injected into the laptop UI.");
         }
         catch (Exception ex)
@@ -139,5 +140,3 @@ public static class ComputerShopAwakePatch
         image.color = new Color(0.45f, 0.45f, 0.45f, 0.6f);
     }
 }
-
-

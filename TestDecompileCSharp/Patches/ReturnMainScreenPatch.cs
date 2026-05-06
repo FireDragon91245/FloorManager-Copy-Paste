@@ -14,5 +14,3 @@ public static class ReturnMainScreenPatch
         RackPlannerScreenController.Instance.Close();
     }
 }
-
-
