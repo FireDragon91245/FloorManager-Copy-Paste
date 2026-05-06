@@ -2,7 +2,7 @@
 using MelonLoader;
 using UnityEngine.InputSystem;
 
-namespace DataCenterLaptopButtonMod.Services;
+namespace FloorManagerCopyPaste.Services;
 
 /// <summary>
 /// Hotkey entrypoint for lightweight maintenance actions.

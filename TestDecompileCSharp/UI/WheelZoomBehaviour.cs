@@ -3,7 +3,7 @@ using Il2CppInterop.Runtime.Injection;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-namespace DataCenterLaptopButtonMod.UI;
+namespace FloorManagerCopyPaste.UI;
 
 /// <summary>
 /// Minimal MonoBehaviour that watches the mouse wheel in <see cref="Update"/>

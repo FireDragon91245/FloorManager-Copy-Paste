@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
-using DataCenterLaptopButtonMod.Models;
+using FloorManagerCopyPaste.Models;
 using Il2Cpp;
 using Il2CppInterop.Runtime;
 using Il2CppInterop.Runtime.InteropTypes.Arrays;
@@ -12,7 +12,7 @@ using MelonLoader.Utils;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
-namespace DataCenterLaptopButtonMod.Services;
+namespace FloorManagerCopyPaste.Services;
 
 internal static class RackPlannerService
 {
@@ -33,7 +33,7 @@ internal static class RackPlannerService
     // servers without touching manual servers, switches, rackMountObjectData, or load state.
     private static readonly HashSet<string> PastedServerIds = new();
 
-    private static string TemplateDirectory => Path.Combine(MelonEnvironment.UserDataDirectory, "DataCenterLaptopButtonMod");
+    private static string TemplateDirectory => Path.Combine(MelonEnvironment.UserDataDirectory, "FloorManagerCopyPaste");
     private static string TemplateFilePath => Path.Combine(TemplateDirectory, "rack-templates.json");
 
     /// <summary>

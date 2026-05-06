@@ -4,11 +4,11 @@
 
 Dieses Projekt ist eine **MelonLoader-Mod für das IL2CPP-Spiel _Data Center_**, geschrieben in **C# / .NET 6**, mit **Harmony**-Patches und einer eigenen **Unity-UI** im Ingame-Laptop.
 
-Das ursprüngliche Ziel war zuerst ein minimaler Laptop-Button-Demo-Mod. Danach wurde das Projekt schrittweise zu einem **DCIM-inspirierten Rack Planner** erweitert.
+Das ursprüngliche Ziel war zuerst ein minimaler Laptop-Button-Prototyp. Danach wurde das Projekt schrittweise zu einer vollwertigen Rack-Planungs- und Copy-&-Paste-Mod erweitert.
 
 Die aktuelle Zielrichtung ist:
 
-- im Laptop einen neuen **RACK**-Button anzeigen
+- im Laptop einen neuen **FLOOR**-Button anzeigen
 - einen eigenen Planner-Screen öffnen
 - Racks im Spiel erkennen und visualisieren
 - ein Rack als **Quelle** wählen
@@ -85,7 +85,7 @@ Wichtige Eigenschaften:
 
 - `TargetFramework`: `net6.0`
 - Output: Library / Mod-DLL
-- Assemblierungsname: `DataCenterLaptopButtonMod`
+- Assemblierungsname: `FloorManagerCopyPaste`
 - automatisches Kopieren nach:
   `D:\SteamLibrary\steamapps\common\Data Center\Mods`
 
@@ -130,9 +130,9 @@ Verantwortung:
 
 Aktueller Status:
 
-- Version: `0.2.0`
-- Mod-Name: `Data Center Laptop Button Mod`
-- loggt beim Start: `Demo-Laptop-Mod initialisiert.`
+- Version: `0.2.5`
+- Mod-Name: `Floor Manager: Copy & Paste`
+- loggt beim Start: `Floor Manager: Copy & Paste initialisiert.`
 
 ### 5.2 Patch-Einstieg im Laptop
 
@@ -142,9 +142,9 @@ Verantwortung:
 
 - hängt sich an `ComputerShop.Awake`
 - liest `canvasComputerShop` und `mainScreen`
-- speichert `LaptopButtonMod.MainScreen`
+- speichert `FloorManagerCopyPasteMod.MainScreen`
 - erzeugt / verknüpft den Custom-Screen
-- fügt im Hauptscreen einen neuen **RACK**-Button ein
+- fügt im Hauptscreen einen neuen **FLOOR**-Button ein
 - registriert den Button-Callback IL2CPP-kompatibel
 
 Wichtige Schutzmaßnahmen:
@@ -267,7 +267,7 @@ Aus jedem Gerät werden u. a. erfasst:
 
 Persistenzort:
 
-`MelonEnvironment.UserDataDirectory\DataCenterLaptopButtonMod\rack-templates.json`
+`MelonEnvironment.UserDataDirectory\FloorManagerCopyPaste\rack-templates.json`
 
 Format:
 
@@ -377,7 +377,7 @@ Feasibility-Hinweise aus der Analyse:
 
 ### 7.3 Zentrale Erkenntnis
 
-Der echte DCIM-ähnliche Workflow ist **teilweise möglich**, wenn man sich auf **Hardware-Platzierung** konzentriert.
+Der echte Planungs- und Copy-&-Paste-Workflow ist **teilweise möglich**, wenn man sich auf **Hardware-Platzierung** konzentriert.
 
 Was gut machbar aussieht:
 
@@ -518,8 +518,8 @@ Fix:
 
 Es gibt zwei zentrale globale Referenzen im Mod:
 
-- `LaptopButtonMod.MainScreen`
-- `LaptopButtonMod.DemoScreen`
+- `FloorManagerCopyPasteMod.MainScreen`
+- `FloorManagerCopyPasteMod.FloorManagerScreen`
 
 Quirk:
 
@@ -535,7 +535,7 @@ Quirk:
 - MelonLoader-Mod-Projekt angelegt
 - Mod sauber als DLL gebaut
 - automatische DLL-Kopie in den Spielordner eingerichtet
-- Laptop-Button-Demo implementiert
+- Laptop-Button-Grundfunktion implementiert
 
 ### Phase 2: Loader-/Interop-Stabilisierung
 
@@ -590,7 +590,7 @@ Zuletzt verifizierter Build:
 
 Zuletzt verifizierte Mod-DLL:
 
-- `D:\SteamLibrary\steamapps\common\Data Center\Mods\DataCenterLaptopButtonMod.dll`
+- `D:\SteamLibrary\steamapps\common\Data Center\Mods\FloorManagerCopyPaste.dll`
 - Zeitstempel: `05.05.2026 20:16:24`
 
 Wichtig:
@@ -694,13 +694,13 @@ Kurzfassung der wichtigsten Regeln:
 - Kabel-/Patching-Rekonstruktion untersuchen
 - 3D-Vorschau oder zumindest richer Preview evaluieren
 - Save-/Load-Konsistenz und Persistenz tiefer verifizieren
-- echte DCIM-ähnliche Planungsfeatures erweitern
+- Copy-&-Paste- und Planungsfeatures weiter ausbauen
 
 ---
 
 ## 16. Fazit
 
-Das Projekt ist von einem kleinen Demo-Laptop-Button zu einer **echten Rack-Planer-Mod mit eigener UI, Template-System, Preislogik und Spawn-/Insert-Versuchen** gewachsen.
+Das Projekt ist von einem kleinen Laptop-Button-Prototyp zu **Floor Manager: Copy & Paste** gewachsen – einer vollwertigen Rack-Planer-Mod mit eigener UI, Template-System, Preislogik und Spawn-/Insert-Versuchen.
 
 Die größten technischen Hürden waren nicht die eigentliche UI, sondern:
 

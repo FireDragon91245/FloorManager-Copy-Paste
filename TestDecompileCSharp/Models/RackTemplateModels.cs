@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace DataCenterLaptopButtonMod.Models;
+namespace FloorManagerCopyPaste.Models;
 
 internal enum RackDeviceKind
 {

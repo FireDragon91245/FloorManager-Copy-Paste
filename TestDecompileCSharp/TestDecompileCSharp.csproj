@@ -6,8 +6,8 @@
     <ImplicitUsings>disable</ImplicitUsings>
     <Nullable>disable</Nullable>
     <LangVersion>latest</LangVersion>
-    <AssemblyName>DataCenterLaptopButtonMod</AssemblyName>
-    <RootNamespace>DataCenterLaptopButtonMod</RootNamespace>
+    <AssemblyName>FloorManagerCopyPaste</AssemblyName>
+    <RootNamespace>FloorManagerCopyPaste</RootNamespace>
     <GameDir>D:\SteamLibrary\steamapps\common\Data Center</GameDir>
     <MelonLoaderRefDir>$(MSBuildThisFileDirectory)..\MelonLoader_x64\MelonLoader\net6</MelonLoaderRefDir>
     <Il2CppAssembliesDir>$(GameDir)\MelonLoader\Il2CppAssemblies</Il2CppAssembliesDir>

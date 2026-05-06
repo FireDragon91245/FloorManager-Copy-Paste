@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using DataCenterLaptopButtonMod.Models;
-using DataCenterLaptopButtonMod.Services;
+using FloorManagerCopyPaste.Models;
+using FloorManagerCopyPaste.Services;
 using Il2Cpp;
 using Il2CppInterop.Runtime;
 using Il2CppTMPro;
@@ -12,7 +12,7 @@ using UnityEngine.Events;
 using UnityEngine.UI;
 using Object = UnityEngine.Object;
 
-namespace DataCenterLaptopButtonMod.UI;
+namespace FloorManagerCopyPaste.UI;
 
 internal sealed class RackPlannerScreenController
 {
@@ -158,7 +158,7 @@ internal sealed class RackPlannerScreenController
 
     private GameObject BuildScreen(GameObject mainScreen)
     {
-        var root = CreateUiObject(LaptopButtonMod.DemoScreenObjectName, mainScreen.transform.parent);
+        var root = CreateUiObject(FloorManagerCopyPasteMod.FloorManagerScreenObjectName, mainScreen.transform.parent);
         root.SetActive(false);
         Stretch(root.GetComponent<RectTransform>());
         var bg = root.AddComponent<Image>();
@@ -200,9 +200,9 @@ internal sealed class RackPlannerScreenController
         colLayout.childForceExpandWidth = true;
         colLayout.childAlignment = TextAnchor.UpperCenter;
 
-        var title = BuildLabel(col.transform, "Rack Planner", 38f, TextAlignmentOptions.Center, Color.white);
+        var title = BuildLabel(col.transform, "Floor Manager: Copy & Paste", 38f, TextAlignmentOptions.Center, Color.white);
         SetPreferredHeight(title.gameObject, 56f);
-        var sub = BuildLabel(col.transform, "DCIM-inspirierter Rack-Planungsassistent", 16f, TextAlignmentOptions.Center, new Color(0.78f, 0.86f, 0.96f, 1f));
+        var sub = BuildLabel(col.transform, "Werkzeuge zum Kopieren, Einfügen und Verwalten von Rack-Layouts", 16f, TextAlignmentOptions.Center, new Color(0.78f, 0.86f, 0.96f, 1f));
         SetPreferredHeight(sub.gameObject, 24f);
 
         BuildBigButton(col.transform, "Floor Plan", "Bestehende Racks ansehen, kopieren oder als Vorlage speichern",
@@ -213,7 +213,7 @@ internal sealed class RackPlannerScreenController
             new Color(0.45f, 0.32f, 0.78f, 1f), () => ShowPage(Page.ViewTemplates));
 
         BuildBigButton(col.transform, "Schließen", "Zurück zum Laptop-Hauptscreen",
-            new Color(0.32f, 0.34f, 0.40f, 1f), () => Close(LaptopButtonMod.MainScreen));
+            new Color(0.32f, 0.34f, 0.40f, 1f), () => Close(FloorManagerCopyPasteMod.MainScreen));
 
         return page;
     }

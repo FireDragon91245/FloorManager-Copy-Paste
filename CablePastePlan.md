@@ -192,7 +192,7 @@ macht. Vermeidet, dass die Hierarchie unter `rackPosition.transform` hängen
 bleibt (was Awake-Validierungen verwirren kann).
 
 ### Fix C — Diagnose
-Neue Datei `Services/DiagnosticsService.cs` + Aufruf aus `LaptopButtonMod.OnUpdate`:
+Neue Datei `Services/DiagnosticsService.cs` + Aufruf aus `FloorManagerCopyPasteMod.OnUpdate`:
 * Hotkey **F8** dumpt:
   * `Object.FindObjectsOfType<CableLink>().Count(l => l.isStartOrEnd)` (Live-Kabel-Endpunkte / 2 = Kabel)
   * `WaypointInitializationSystem.Instance.GetAllCables().Count`

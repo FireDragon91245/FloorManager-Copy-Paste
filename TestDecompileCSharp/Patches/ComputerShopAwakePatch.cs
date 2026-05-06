@@ -2,14 +2,14 @@
 using HarmonyLib;
 using Il2Cpp;
 using Il2CppInterop.Runtime;
-using DataCenterLaptopButtonMod.UI;
+using FloorManagerCopyPaste.UI;
 using Il2CppTMPro;
 using MelonLoader;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.UI;
 
-namespace DataCenterLaptopButtonMod.Patches;
+namespace FloorManagerCopyPaste.Patches;
 
 [HarmonyPatch(typeof(ComputerShop), "Awake")]
 public static class ComputerShopAwakePatch
@@ -23,43 +23,43 @@ public static class ComputerShopAwakePatch
         {
             var canvasComputerShop = __instance.canvasComputerShop;
             var mainScreen = __instance.mainScreen;
-            LaptopButtonMod.MainScreen = mainScreen;
+            FloorManagerCopyPasteMod.MainScreen = mainScreen;
 
             if (canvasComputerShop == null || mainScreen == null)
             {
-                MelonLogger.Warning("[LaptopDemo] canvasComputerShop oder mainScreen war null; Button-Injektion übersprungen.");
+                MelonLogger.Warning("[FloorManager] canvasComputerShop oder mainScreen war null; Button-Injektion übersprungen.");
                 return;
             }
 
             var layoutGroup = mainScreen.GetComponentInChildren<LayoutGroup>();
             if (layoutGroup == null)
             {
-                MelonLogger.Warning("[LaptopDemo] Kein LayoutGroup-Knoten im Laptop-Hauptscreen gefunden.");
+                MelonLogger.Warning("[FloorManager] Kein LayoutGroup-Knoten im Laptop-Hauptscreen gefunden.");
                 return;
             }
 
-            if (layoutGroup.transform.Find(LaptopButtonMod.DemoButtonObjectName) != null)
+            if (layoutGroup.transform.Find(FloorManagerCopyPasteMod.FloorManagerButtonObjectName) != null)
                 return;
 
-            var button = BuildAppButton(layoutGroup.transform, "RACK");
-            button.gameObject.name = LaptopButtonMod.DemoButtonObjectName;
-            button.onClick.AddListener(DelegateSupport.ConvertDelegate<UnityAction>(() => OpenDemoScreen(__instance, mainScreen)));
-            MelonLogger.Msg("[LaptopDemo] Rack-Planner-Button im Laptop eingefügt.");
+            var button = BuildAppButton(layoutGroup.transform, "FLOOR");
+            button.gameObject.name = FloorManagerCopyPasteMod.FloorManagerButtonObjectName;
+            button.onClick.AddListener(DelegateSupport.ConvertDelegate<UnityAction>(() => OpenFloorManagerScreen(__instance, mainScreen)));
+            MelonLogger.Msg("[FloorManager] Floor-Manager-Button im Laptop eingefügt.");
         }
         catch (Exception ex)
         {
-            MelonLogger.Error($"[LaptopDemo] Fehler in ComputerShop.Awake-Postfix: {ex}");
+            MelonLogger.Error($"[FloorManager] Fehler in ComputerShop.Awake-Postfix: {ex}");
         }
     }
 
-    private static void OpenDemoScreen(ComputerShop computerShop, GameObject mainScreen)
+    private static void OpenFloorManagerScreen(ComputerShop computerShop, GameObject mainScreen)
     {
         RackPlannerScreenController.Instance.Open(computerShop, mainScreen);
     }
 
     private static Button BuildAppButton(Transform parent, string label)
     {
-        var buttonObject = new GameObject(LaptopButtonMod.DemoButtonObjectName);
+        var buttonObject = new GameObject(FloorManagerCopyPasteMod.FloorManagerButtonObjectName);
         buttonObject.transform.SetParent(parent, false);
 
         var buttonRect = buttonObject.AddComponent<RectTransform>();

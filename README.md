@@ -1,14 +1,14 @@
-﻿# Data Center MelonLoader Rack Planner Mod
+﻿# Floor Manager: Copy & Paste
 
-Dieses Workspace-Projekt enthält jetzt eine MelonLoader-Mod für das IL2CPP-Spiel **Data Center**, die im Laptop einen neuen **Rack Planner**-Screen bereitstellt.
+Dieses Workspace-Projekt enthält eine MelonLoader-Mod für das IL2CPP-Spiel **Data Center**, die im Laptop einen neuen **Floor Manager**-Screen für Copy-&-Paste-Workflows bereitstellt.
 
 ## Was enthalten ist
 
 - `TestDecompileCSharp/TestDecompileCSharp.csproj` – Class-Library-Projekt für MelonLoader (`net6.0`)
 - `TestDecompileCSharp/Program.cs` – Mod-Einstiegsklasse mit `MelonInfo`/`MelonGame`
-- `TestDecompileCSharp/Patches/ComputerShopAwakePatch.cs` – injiziert einen neuen **RACK**-Button in die Laptop-Oberfläche
-- `TestDecompileCSharp/Patches/ReturnMainScreenPatch.cs` – blendet den Rack-Planner beim Rücksprung korrekt aus
-- `TestDecompileCSharp/UI/RackPlannerScreenController.cs` – baut den DCIM-inspirierten Floor-/Rack-Screen im Laptop auf
+- `TestDecompileCSharp/Patches/ComputerShopAwakePatch.cs` – injiziert einen neuen **FLOOR**-Button in die Laptop-Oberfläche
+- `TestDecompileCSharp/Patches/ReturnMainScreenPatch.cs` – blendet den Floor-Manager beim Rücksprung korrekt aus
+- `TestDecompileCSharp/UI/RackPlannerScreenController.cs` – baut den Floor-Manager-Screen im Laptop auf
 - `TestDecompileCSharp/Services/RackPlannerService.cs` – liest Racks, speichert Templates, berechnet Klon-Kosten und versucht Hardware direkt ins Ziel-Rack einzufügen
 - `TestDecompileCSharp/Models/RackTemplateModels.cs` – Template-/Preview-Datenmodelle
 
@@ -53,8 +53,8 @@ dotnet build .\TestDecompileCSharp\TestDecompileCSharp.csproj -c Debug
 
 1. Spiel normal starten.
 2. Laptop/Computer-Shop öffnen.
-3. Auf dem Hauptscreen sollte ein neuer Button **RACK** erscheinen.
-4. Beim Klick öffnet sich der Rack-Planner.
+3. Auf dem Hauptscreen sollte ein neuer Button **FLOOR** erscheinen.
+4. Beim Klick öffnet sich **Floor Manager: Copy & Paste**.
 5. Mit **Quelle wählen** und **Ziel wählen** im Floor-Layout zwei Racks auswählen.
 6. Optional mit **Quelle speichern** ein Template ablegen.
 7. Mit **Quelle -> Ziel** oder **Vorlage -> Ziel** den Clone ausführen.
@@ -64,12 +64,12 @@ dotnet build .\TestDecompileCSharp\TestDecompileCSharp.csproj -c Debug
 - Build erfolgreich
 - DLL wird automatisch nach `D:/SteamLibrary/steamapps/common/Data Center/Mods` kopiert
 - Der `UnityEngine.CoreModule`-Startfehler wurde durch den separat ausgeführten `FixCoreModule`-Patch behoben
-- MelonLoader lädt `DataCenterLaptopButtonMod.dll` sauber als Mod
+- MelonLoader lädt `FloorManagerCopyPaste.dll` sauber als Mod
 - `Support Module Loaded` erscheint im Laufzeitlog
-- `Demo-Laptop-Mod initialisiert.` erscheint im Laufzeitlog, d. h. `OnInitializeMelon()` läuft erfolgreich
-- Der neue Rack-Planner baut erfolgreich als `DataCenterLaptopButtonMod.dll`
+- `Floor Manager: Copy & Paste initialisiert.` erscheint im Laufzeitlog, d. h. `OnInitializeMelon()` läuft erfolgreich
+- Der neue Floor Manager baut erfolgreich als `FloorManagerCopyPaste.dll`
 
-Der nächste praktische Schritt ist jetzt der echte In-Game-Test des Laptop-Screens: prüfen, ob im Computer-Shop der **RACK**-Button sichtbar ist, ob Quelle/Ziel korrekt gewählt werden können und ob ein leeres Ziel-Rack sauber befüllt wird.
+Der nächste praktische Schritt ist jetzt der echte In-Game-Test des Laptop-Screens: prüfen, ob im Computer-Shop der **FLOOR**-Button sichtbar ist, ob Quelle/Ziel korrekt gewählt werden können und ob ein leeres Ziel-Rack sauber befüllt wird.
 
 ## Wichtige Hinweise
 

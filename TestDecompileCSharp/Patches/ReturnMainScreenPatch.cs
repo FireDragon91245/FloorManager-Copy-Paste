@@ -1,8 +1,8 @@
 ﻿using HarmonyLib;
-using DataCenterLaptopButtonMod.UI;
+using FloorManagerCopyPaste.UI;
 using Il2Cpp;
 
-namespace DataCenterLaptopButtonMod.Patches;
+namespace FloorManagerCopyPaste.Patches;
 
 [HarmonyPatch(typeof(ComputerShop), "ButtonReturnMainScreen")]
 public static class ReturnMainScreenPatch
