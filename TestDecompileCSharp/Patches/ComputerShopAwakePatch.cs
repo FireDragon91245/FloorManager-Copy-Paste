@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using HarmonyLib;
 using Il2Cpp;
 using Il2CppInterop.Runtime;
@@ -7,7 +6,6 @@ using DataCenterLaptopButtonMod.UI;
 using Il2CppTMPro;
 using MelonLoader;
 using UnityEngine;
-using UnityEngine.EventSystems;
 using UnityEngine.Events;
 using UnityEngine.UI;
 
@@ -17,6 +15,8 @@ namespace DataCenterLaptopButtonMod.Patches;
 public static class ComputerShopAwakePatch
 {
     [HarmonyPostfix]
+    // ReSharper disable once InconsistentNaming
+    // ReSharper disable once UnusedMember.Global
     public static void Postfix(ComputerShop __instance)
     {
         try
@@ -31,7 +31,6 @@ public static class ComputerShopAwakePatch
                 return;
             }
 
-            var demoScreen = EnsureDemoScreen(mainScreen);
             var layoutGroup = mainScreen.GetComponentInChildren<LayoutGroup>();
             if (layoutGroup == null)
             {
@@ -44,7 +43,7 @@ public static class ComputerShopAwakePatch
 
             var button = BuildAppButton(layoutGroup.transform, "RACK");
             button.gameObject.name = LaptopButtonMod.DemoButtonObjectName;
-            button.onClick.AddListener(DelegateSupport.ConvertDelegate<UnityAction>(() => OpenDemoScreen(__instance, mainScreen, demoScreen)));
+            button.onClick.AddListener(DelegateSupport.ConvertDelegate<UnityAction>(() => OpenDemoScreen(__instance, mainScreen)));
             MelonLogger.Msg("[LaptopDemo] Rack-Planner-Button im Laptop eingefügt.");
         }
         catch (Exception ex)
@@ -53,30 +52,10 @@ public static class ComputerShopAwakePatch
         }
     }
 
-    private static GameObject EnsureDemoScreen(GameObject mainScreen)
-    {
-        var screen = RackPlannerScreenController.Instance.EnsureScreen(mainScreen);
-        LaptopButtonMod.DemoScreen = screen;
-        return screen;
-    }
-
-    private static void OpenDemoScreen(ComputerShop computerShop, GameObject mainScreen, GameObject demoScreen)
+    private static void OpenDemoScreen(ComputerShop computerShop, GameObject mainScreen)
     {
         RackPlannerScreenController.Instance.Open(computerShop, mainScreen);
     }
-
-    private static IEnumerator CopyRectTransformNextFrame(RectTransform target, RectTransform source)
-    {
-        yield return null;
-        target.anchorMin = source.anchorMin;
-        target.anchorMax = source.anchorMax;
-        target.pivot = source.pivot;
-        target.sizeDelta = source.sizeDelta;
-        target.anchoredPosition = source.anchoredPosition;
-        target.offsetMin = source.offsetMin;
-        target.offsetMax = source.offsetMax;
-    }
-
 
     private static Button BuildAppButton(Transform parent, string label)
     {

@@ -8,6 +8,7 @@ namespace DataCenterLaptopButtonMod.Patches;
 public static class ReturnMainScreenPatch
 {
     [HarmonyPostfix]
+    // ReSharper disable once UnusedMember.Global
     public static void Postfix()
     {
         RackPlannerScreenController.Instance.Close();

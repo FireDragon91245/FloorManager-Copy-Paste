@@ -28,8 +28,6 @@ internal static class RackPlannerService
         WriteIndented = true
     };
 
-    private static readonly bool VerboseRackPlannerDebug = false;
-
     // Tracks only server GameObjects created by this paste flow in the current runtime.
     // We use this to correct the persisted RackPosition anchor for pasted multi-U
     // servers without touching manual servers, switches, rackMountObjectData, or load state.
@@ -93,12 +91,6 @@ internal static class RackPlannerService
                 return;
             }
 
-            int beforeServers = network.servers?.Count ?? -1;
-            int beforeSwitches = network.switches?.Count ?? -1;
-            int beforePatches = network.patchPanels?.Count ?? -1;
-
-            int addedServers = 0, addedSwitches = 0, addedPatches = 0;
-
             var servers = Object.FindObjectsOfType<Server>();
             foreach (var s in servers)
             {
@@ -110,9 +102,7 @@ internal static class RackPlannerService
                 var uo = s.GetComponent<UsableObject>();
                 if (uo == null) continue;
                 var data = BuildServerSaveData(s, uo, rp);
-                int sizeBefore = network.servers.Count;
                 UpsertServerSaveData(network.servers, data);
-                if (network.servers.Count > sizeBefore) addedServers++;
             }
 
             var switches = Object.FindObjectsOfType<NetworkSwitch>();
@@ -124,9 +114,7 @@ internal static class RackPlannerService
                 if (rp == null) continue;
                 EnsureValidRackPositionUid(rp);
                 var data = BuildSwitchSaveData(sw, rp);
-                int sizeBefore = network.switches.Count;
                 UpsertSwitchSaveData(network.switches, data);
-                if (network.switches.Count > sizeBefore) addedSwitches++;
             }
 
             var patches = Object.FindObjectsOfType<PatchPanel>();
@@ -138,12 +126,8 @@ internal static class RackPlannerService
                 if (rp == null) continue;
                 EnsureValidRackPositionUid(rp);
                 var data = BuildPatchPanelSaveData(pp, rp);
-                int sizeBefore = network.patchPanels.Count;
                 UpsertPatchPanelSaveData(network.patchPanels, data);
-                if (network.patchPanels.Count > sizeBefore) addedPatches++;
             }
-
-            MelonLogger.Msg($"[RackPlanner][SAVE-HOOK] before={{srv={beforeServers},sw={beforeSwitches},pp={beforePatches}}} after={{srv={network.servers.Count},sw={network.switches.Count},pp={network.patchPanels.Count}}} added={{srv={addedServers},sw={addedSwitches},pp={addedPatches}}} live={{srv={servers.Length},sw={switches.Length},pp={patches.Length}}}");
         }
         catch (Exception ex)
         {
@@ -151,10 +135,6 @@ internal static class RackPlannerService
         }
     }
 
-    private static void VerboseLog(string message)
-    {
-        if (VerboseRackPlannerDebug) MelonLogger.Msg(message);
-    }
 
     public static IReadOnlyList<RackRuntimeInfo> GetEmptyOrSparseRacks(int maxUsedSlots = 0)
     {
@@ -365,8 +345,9 @@ internal static class RackPlannerService
         }
 
         var successfulCosts = 0;
-        foreach (var purchase in preview.Purchases)
+        for (var purchaseIndex = 0; purchaseIndex < preview.Purchases.Count; purchaseIndex++)
         {
+            var purchase = preview.Purchases[purchaseIndex];
             if (TrySpawnIntoRack(targetRack.Rack, purchase, out var message))
             {
                 result.SpawnedCount++;
@@ -407,6 +388,7 @@ internal static class RackPlannerService
 
         if (preview.Purchases.Count == 0 && result.CablesCreated == 0)
             result.Messages.Add("Nichts zu kaufen oder einzufügen – Ziel-Rack passt bereits.");
+
 
         return result;
     }
@@ -579,8 +561,6 @@ internal static class RackPlannerService
         }
 
         if (matched <= 0) return -1;
-        if (matched != Math.Max(1, sizeInU))
-            VerboseLog($"[RackPlanner][CAPTURE-SLOT] ownerUID={ownerUid} bitmapMatched={matched} sizeU={sizeInU}; using minPhysical={minPhysical}");
         return minPhysical == int.MaxValue ? -1 : minPhysical;
     }
 
@@ -613,8 +593,6 @@ internal static class RackPlannerService
         var localEuler = rackTr != null
             ? Vec3.From((Quaternion.Inverse(rackTr.rotation) * usableObject.transform.rotation).eulerAngles)
             : default;
-        VerboseLog($"[RackPlanner][CAPTURE] dev kind={(usableObject.GetComponent<Server>()!=null?"Server":usableObject.GetComponent<NetworkSwitch>()!=null?"NetworkSwitch":"PatchPanel")} sizeU={sizeInU} bottomPhysSlot={startIndex} anchorPhysSlot={anchorIndex} bitmapBottomPhysSlot={bitmapStartIndex} localPos={localPos.ToUnity()} localEuler={localEuler.ToUnity()} slotLocal={(rackTr!=null?rackTr.InverseTransformPoint(rackPos.transform.position):Vector3.zero)}");
-
         server = usableObject.GetComponent<Server>();
         if (server != null)
         {
@@ -636,7 +614,6 @@ internal static class RackPlannerService
                 // intentionally NOT captured: a pasted server should be a fresh one.
                 ServerType = server.serverType
             };
-            MelonLogger.Msg($"[RackPlanner][CAPTURE-SRV] name='{usableObject.name}' serverType={server.serverType} (IP/customer/appID not copied — paste will get a fresh assignment)");
             return true;
         }
 
@@ -730,10 +707,8 @@ internal static class RackPlannerService
     private static List<RackCableTemplate> CaptureRackCables(Rack sourceRack, List<DeviceWithRuntime> rackDevices)
     {
         var cables = new List<RackCableTemplate>();
-        VerboseLog($"[RackPlanner][CABLE-DUMP] === CaptureRackCables START === rack={(sourceRack==null?"<null>":sourceRack.name)} devices={rackDevices?.Count ?? 0}");
         if (rackDevices == null || rackDevices.Count == 0 || sourceRack == null)
         {
-            VerboseLog("[RackPlanner][CABLE-DUMP] EARLY EXIT: no devices or no rack");
             return cables;
         }
 
@@ -743,44 +718,28 @@ internal static class RackPlannerService
         {
             var d = rackDevices[i];
             var ports = GetCableLinkPorts(d);
-            var portCount = ports?.Count ?? -1;
-            VerboseLog($"[RackPlanner][CABLE-DUMP] Device[{i}] kind={d.Template.Kind} name='{d.Template.DisplayName}' slot={d.Template.StartIndex} sizeU={d.Template.SizeInU} portsArray={(ports==null?"NULL":portCount.ToString())}");
             if (ports == null) continue;
             for (var p = 0; p < ports.Count; p++)
             {
                 var link = ports[p];
                 if (link == null)
                 {
-                    VerboseLog($"[RackPlanner][CABLE-DUMP]   Port[{p}] = NULL link");
                     continue;
                 }
-                int cableId = -999; bool isStartOrEnd = false, isEndPoint = false; int typeOfLink = -999; float speed = -1f; int sfp = -999;
-                try { cableId = link.cableIDsOnLink; } catch (Exception ex) { VerboseLog($"[RackPlanner][CABLE-DUMP]   Port[{p}] cableIDsOnLink threw: {ex.Message}"); }
-                try { isStartOrEnd = link.isStartOrEnd; } catch { }
-                try { isEndPoint = link.isEndPoint; } catch { }
-                try { typeOfLink = (int)link.typeOfLink; } catch { }
-                try { speed = link.connectionSpeed; } catch { }
-                try { sfp = link.sfpTypeInserted; } catch { }
-                VerboseLog($"[RackPlanner][CABLE-DUMP]   Port[{p}] link={link.GetInstanceID()} cableId={cableId} startOrEnd={isStartOrEnd} endPoint={isEndPoint} type={typeOfLink} speed={speed} sfp={sfp}");
 
                 if (!linkLookup.ContainsKey(link))
                     linkLookup[link] = (i, p, d.Template.Kind);
-                else
-                    VerboseLog($"[RackPlanner][CABLE-DUMP]   Port[{p}] DUPLICATE link reference (already mapped)");
             }
         }
 
-        VerboseLog($"[RackPlanner][CABLE-DUMP] Total unique CableLinks discovered: {linkLookup.Count}");
-
         // Group by cable id
         var byCable = new Dictionary<int, List<(CableLink link, int devIdx, int port, RackDeviceKind kind)>>();
-        int skippedNoId = 0, skippedThrew = 0;
         foreach (var kv in linkLookup)
         {
             var link = kv.Key;
             int cableId = 0;
-            try { cableId = link.cableIDsOnLink; } catch { skippedThrew++; continue; }
-            if (cableId <= 0) { skippedNoId++; continue; }
+            try { cableId = link.cableIDsOnLink; } catch { continue; }
+            if (cableId <= 0) continue;
             if (!byCable.TryGetValue(cableId, out var lst))
             {
                 lst = new List<(CableLink, int, int, RackDeviceKind)>();
@@ -789,23 +748,14 @@ internal static class RackPlannerService
             lst.Add((link, kv.Value.deviceIndex, kv.Value.portIndex, kv.Value.kind));
         }
 
-        VerboseLog($"[RackPlanner][CABLE-DUMP] Grouping: distinctCableIds={byCable.Count} skippedNoId={skippedNoId} skippedThrew={skippedThrew}");
-        foreach (var pair in byCable)
-            VerboseLog($"[RackPlanner][CABLE-DUMP]   cableId={pair.Key} endpointsFound={pair.Value.Count} (devIdx,port,kind)=[{string.Join(",", pair.Value.Select(v => $"({v.devIdx},{v.port},{v.kind})"))}]");
-
         var positions = CablePositions.instance;
-        VerboseLog($"[RackPlanner][CABLE-DUMP] CablePositions.instance={(positions==null?"NULL":"OK")}");
-        var (boundsMin, boundsMax) = GetRackLocalBounds(sourceRack);
-        VerboseLog($"[RackPlanner][CABLE-DUMP] Rack local bounds: min={boundsMin} max={boundsMax}");
         var sourceTr = sourceRack.transform;
 
         foreach (var pair in byCable)
         {
-            VerboseLog($"[RackPlanner][CABLE-DUMP] --- Processing cableId={pair.Key} endpoints={pair.Value.Count} ---");
             // Both endpoints must terminate on a device inside this rack.
             if (pair.Value.Count < 2)
             {
-                VerboseLog($"[RackPlanner][CABLE-DUMP]   SKIP cableId={pair.Key}: only {pair.Value.Count} endpoint(s) inside this rack (other end is in a different rack or not on a captured device)");
                 continue;
             }
             var a = pair.Value[0];
@@ -819,10 +769,9 @@ internal static class RackPlannerService
             bool fullyInside = true;
             int sfpA = -1, sfpB = -1;
 
-            try { speed = a.link.connectionSpeed; } catch (Exception ex) { VerboseLog($"[RackPlanner][CABLE-DUMP]   speed read threw: {ex.Message}"); }
+            try { speed = a.link.connectionSpeed; } catch { /* non-fatal */ }
             try { sfpA = a.link.sfpTypeInserted; } catch { }
             try { sfpB = b.link.sfpTypeInserted; } catch { }
-            VerboseLog($"[RackPlanner][CABLE-DUMP]   endpoints: A=(dev{a.devIdx},port{a.port},{a.kind}) B=(dev{b.devIdx},port{b.port},{b.kind}) speed={speed} sfpA={sfpA} sfpB={sfpB}");
 
             try
             {
@@ -830,7 +779,6 @@ internal static class RackPlannerService
                 {
                     var mat = positions.GetCableMaterial(pair.Key);
                     if (mat != null) color = mat.color;
-                    VerboseLog($"[RackPlanner][CABLE-DUMP]   material={(mat==null?"NULL":"OK")} color=({color.r:0.##},{color.g:0.##},{color.b:0.##},{color.a:0.##})");
 
                     // Raw link transforms = ordered list of every Transform the cable
                     // routes through (endpoint A → hooks/holders → endpoint B). This is
@@ -838,7 +786,6 @@ internal static class RackPlannerService
                     // the same path on a target rack with the same prefab.
                     var rawTransforms = positions.GetRawLinkTransforms(pair.Key);
                     var rawCount = rawTransforms?.Count ?? 0;
-                    VerboseLog($"[RackPlanner][CABLE-DUMP]   rawTransforms={(rawTransforms==null?"NULL":rawCount.ToString())}");
 
                     // Path 1: hook transforms (preferred, gives the exact routing path).
                     // We do NOT AABB-test these – cable physics often route along the back
@@ -852,11 +799,9 @@ internal static class RackPlannerService
                             var tr = rawTransforms[i];
                             if (tr == null)
                             {
-                                VerboseLog($"[RackPlanner][CABLE-DUMP]     raw[{i}] = NULL transform (skipped)");
                                 continue;
                             }
                             var local = sourceTr.InverseTransformPoint(tr.position);
-                            VerboseLog($"[RackPlanner][CABLE-DUMP]     raw[{i}] world={tr.position} local={local} name='{tr.name}'");
                             localRoute.Add(Vec3.From(local));
                         }
                     }
@@ -867,7 +812,6 @@ internal static class RackPlannerService
                     // been re-saved yet).
                     var pts = positions.GetCablePositions(pair.Key);
                     var renderedCount = pts?.Count ?? 0;
-                    VerboseLog($"[RackPlanner][CABLE-DUMP]   renderedPositions={(pts==null?"NULL":renderedCount.ToString())}");
                     if (pts != null)
                     {
                         Vector3? prev = null;
@@ -884,7 +828,6 @@ internal static class RackPlannerService
                     // Same rationale: trust endpoint containment, no AABB rejection.
                     if (localRoute.Count < 2 && pts != null && renderedCount >= 2)
                     {
-                        VerboseLog($"[RackPlanner][CABLE-DUMP]   FALLBACK: building LocalRoute from {renderedCount} rendered positions");
                         // Downsample to keep the route compact (every Nth point + first/last).
                         var step = Math.Max(1, renderedCount / 20);
                         for (var i = 0; i < renderedCount; i++)
@@ -898,12 +841,11 @@ internal static class RackPlannerService
 
                     // We accept the cable as long as we have at least the two endpoints.
                     fullyInside = localRoute.Count >= 2;
-                    VerboseLog($"[RackPlanner][CABLE-DUMP]   computed length={length:0.###}m localRoute.Count={localRoute.Count} accepted={fullyInside}");
                 }
             }
             catch (Exception ex)
             {
-                MelonLogger.Warning($"[RackPlanner][CABLE-DUMP]   route capture EXCEPTION cableId={pair.Key}: {ex}");
+                MelonLogger.Warning($"[RackPlanner] Cable route capture failed for cableId={pair.Key}: {ex.Message}");
                 fullyInside = false;
             }
 
@@ -911,7 +853,6 @@ internal static class RackPlannerService
             // want partial cables that depend on hooks outside the rack.
             if (!fullyInside || localRoute.Count < 2)
             {
-                VerboseLog($"[RackPlanner][CABLE-DUMP]   REJECT cableId={pair.Key}: fullyInside={fullyInside} localRoute.Count={localRoute.Count}");
                 continue;
             }
 
@@ -919,8 +860,6 @@ internal static class RackPlannerService
             try { typeA = (int)a.link.typeOfLink; } catch { /* ignore */ }
             try { typeB = (int)b.link.typeOfLink; } catch { /* ignore */ }
 
-            VerboseLog($"[RackPlanner][CABLE-DUMP]   ACCEPT cableId={pair.Key}: A=(dev{a.devIdx},port{a.port}) B=(dev{b.devIdx},port{b.port}) len={length:0.##}m hooks={localRoute.Count}");
-            MelonLogger.Msg($"[RackPlanner][CABLE-CAPTURE] MANUAL id={pair.Key} A=dev{a.devIdx}.port{a.port} type={(CableLink.TypeOfLink)typeA} pos={a.link.transform.position} cableId={a.link.cableIDsOnLink} startOrEnd={a.link.isStartOrEnd} end={a.link.isEndPoint} sw='{a.link.switchID ?? string.Empty}' cust={a.link.CustomerID} sfp={sfpA} B=dev{b.devIdx}.port{b.port} type={(CableLink.TypeOfLink)typeB} pos={b.link.transform.position} cableId={b.link.cableIDsOnLink} startOrEnd={b.link.isStartOrEnd} end={b.link.isEndPoint} sw='{b.link.switchID ?? string.Empty}' cust={b.link.CustomerID} sfp={sfpB} route={localRoute.Count} rendered={worldWaypoints.Count} speed={speed:0.###}");
             cables.Add(new RackCableTemplate
             {
                 EndA = new RackCableEndpoint { DeviceIndex = a.devIdx, PortIndex = a.port, Kind = a.kind },
@@ -941,7 +880,6 @@ internal static class RackPlannerService
             });
         }
 
-        VerboseLog($"[RackPlanner][CABLE-DUMP] === CaptureRackCables END === captured {cables.Count} cable(s) for rack '{sourceRack.name}'");
         return cables;
     }
 
@@ -1071,7 +1009,6 @@ internal static class RackPlannerService
                 var dFirstA = (routeFirstWorld - attachA.position).sqrMagnitude;
                 var dLastA = (routeLastWorld - attachA.position).sqrMagnitude;
                 var routeReversed = dFirstA > dLastA;
-                MelonLogger.Msg($"[RackPlanner][CABLE-APPLY] dev{cable.EndA.DeviceIndex}.{cable.EndA.PortIndex}->dev{cable.EndB.DeviceIndex}.{cable.EndB.PortIndex} routeLen={cable.LocalRoute.Count} dFirstA={dFirstA:0.###} dLastA={dLastA:0.###} reverse={routeReversed}");
 
                 // Translate every captured rack-local hook position into the target
                 // rack's world space and replace the two endpoints with the actual
@@ -1146,7 +1083,6 @@ internal static class RackPlannerService
                 try { devA.Server?.RegisterLink(linkA); } catch { /* non-fatal */ }
                 try { devB.Server?.RegisterLink(linkB); } catch { /* non-fatal */ }
 
-                MelonLogger.Msg($"[RackPlanner][CABLE-VANILLA] cableId={newId} vanillaRegistered={registered} A=({typeA},server='{startEp.serverID}',switch='{startEp.switchID}',sfp={cable.SfpTypeA}) B=({typeB},server='{endEp.serverID}',switch='{endEp.switchID}',sfp={cable.SfpTypeB}) points={worldRoute.Count}");
                 result.CablesCreated++;
             }
             catch (Exception ex)
@@ -1486,33 +1422,78 @@ internal static class RackPlannerService
     private static void EnsureValidRackPositionUid(RackPosition pos)
     {
         if (pos == null) return;
-        try { if (pos.rackPosGlobalUID > 0) return; } catch { return; }
 
-        int newUid;
+        int currentUid;
+        try { currentUid = pos.rackPosGlobalUID; } catch { return; }
+
+        var needsFreshUid = currentUid <= 0 || RackPositionUidIsUsedByAnotherPosition(pos, currentUid);
+        if (!needsFreshUid) return;
+
+        var newUid = AllocateFreshRackPositionUid();
+        try
+        {
+            pos.SetUID(newUid);
+        }
+        catch (Exception ex) { MelonLogger.Warning($"[RackPlanner] SetUID({newUid}) failed: {ex.Message}"); }
+    }
+
+    private static bool RackPositionUidIsUsedByAnotherPosition(RackPosition pos, int uid)
+    {
+        if (pos == null || uid <= 0) return false;
+        try
+        {
+            var allPositions = Object.FindObjectsOfType<RackPosition>();
+            foreach (var other in allPositions)
+            {
+                if (other == null || ReferenceEquals(other, pos)) continue;
+                try
+                {
+                    if (other.rackPosGlobalUID == uid) return true;
+                }
+                catch { /* non-fatal */ }
+            }
+        }
+        catch { /* non-fatal */ }
+
+        return false;
+    }
+
+    private static int AllocateFreshRackPositionUid()
+    {
+        var maxUid = 0;
+        try
+        {
+            var allPositions = Object.FindObjectsOfType<RackPosition>();
+            foreach (var pos in allPositions)
+            {
+                if (pos == null) continue;
+                try { if (pos.rackPosGlobalUID > maxUid) maxUid = pos.rackPosGlobalUID; }
+                catch { /* non-fatal */ }
+            }
+        }
+        catch { /* non-fatal */ }
+
         try
         {
             var save = SaveData.instance;
-            if (save != null)
-            {
-                save.lastUsedRackPositionGlobalUID += 1;
-                newUid = save.lastUsedRackPositionGlobalUID;
-            }
-            else
-            {
-                if (_runtimeUidFloor < 100000) _runtimeUidFloor = 100000;
-                _runtimeUidFloor += 1;
-                newUid = _runtimeUidFloor;
-            }
+            if (save != null && save.lastUsedRackPositionGlobalUID > maxUid)
+                maxUid = save.lastUsedRackPositionGlobalUID;
         }
-        catch
-        {
-            if (_runtimeUidFloor < 100000) _runtimeUidFloor = 100000;
-            _runtimeUidFloor += 1;
-            newUid = _runtimeUidFloor;
-        }
+        catch { /* non-fatal */ }
 
-        try { pos.SetUID(newUid); }
-        catch (Exception ex) { MelonLogger.Warning($"[RackPlanner] SetUID({newUid}) failed: {ex.Message}"); }
+        if (_runtimeUidFloor > maxUid) maxUid = _runtimeUidFloor;
+        var newUid = Math.Max(100000, maxUid) + 1;
+        _runtimeUidFloor = newUid;
+
+        try
+        {
+            var save = SaveData.instance;
+            if (save != null && save.lastUsedRackPositionGlobalUID < newUid)
+                save.lastUsedRackPositionGlobalUID = newUid;
+        }
+        catch { /* non-fatal */ }
+
+        return newUid;
     }
 
     /// <summary>
@@ -1673,7 +1654,6 @@ internal static class RackPlannerService
         {
             var data = BuildServerSaveData(server, usableObject, rackPosition);
             UpsertServerSaveData(network.servers, data);
-            MelonLogger.Msg($"[RackPlanner][DEVICE-SAVE] upsert server='{data.serverID}' rackPos={data.rackPositionUID} saveServers={network.servers.Count}");
             return;
         }
 
@@ -1682,7 +1662,6 @@ internal static class RackPlannerService
         {
             var data = BuildSwitchSaveData(sw, rackPosition);
             UpsertSwitchSaveData(network.switches, data);
-            MelonLogger.Msg($"[RackPlanner][DEVICE-SAVE] upsert switch='{data.switchID}' rackPos={data.rackPositionUID} saveSwitches={network.switches.Count}");
             return;
         }
 
@@ -1691,7 +1670,6 @@ internal static class RackPlannerService
         {
             var data = BuildPatchPanelSaveData(patch, rackPosition);
             UpsertPatchPanelSaveData(network.patchPanels, data);
-            MelonLogger.Msg($"[RackPlanner][DEVICE-SAVE] upsert patch='{data.patchPanelID}' rackPos={data.rackPositionUID} savePatchPanels={network.patchPanels.Count}");
         }
     }
 
@@ -1741,11 +1719,6 @@ internal static class RackPlannerService
             return currentRackPosition;
 
         EnsureValidRackPositionUid(closest);
-        if (closest != currentRackPosition)
-        {
-            MelonLogger.Msg($"[RackPlanner][SERVER-SAVE-ANCHOR] server='{serverId}' sizeU={sizeU} rackPosUID {currentRackPosition.rackPosGlobalUID}->{closest.rackPosGlobalUID} physSlot {ResolveSlotIndex(currentRackPosition.rack, currentRackPosition)}->{ResolveSlotIndex(currentRackPosition.rack, closest)}");
-        }
-
         return closest;
     }
 
@@ -1811,8 +1784,7 @@ internal static class RackPlannerService
         {
             var existing = servers[i];
             if (existing == null) continue;
-            if ((!string.IsNullOrEmpty(data.serverID) && existing.serverID == data.serverID)
-                || existing.rackPositionUID == data.rackPositionUID)
+            if (!string.IsNullOrEmpty(data.serverID) && existing.serverID == data.serverID)
             {
                 servers[i] = data;
                 return;
@@ -1828,8 +1800,7 @@ internal static class RackPlannerService
         {
             var existing = switches[i];
             if (existing == null) continue;
-            if ((!string.IsNullOrEmpty(data.switchID) && existing.switchID == data.switchID)
-                || existing.rackPositionUID == data.rackPositionUID)
+            if (!string.IsNullOrEmpty(data.switchID) && existing.switchID == data.switchID)
             {
                 switches[i] = data;
                 return;
@@ -1845,8 +1816,7 @@ internal static class RackPlannerService
         {
             var existing = patchPanels[i];
             if (existing == null) continue;
-            if ((!string.IsNullOrEmpty(data.patchPanelID) && existing.patchPanelID == data.patchPanelID)
-                || existing.rackPositionUID == data.rackPositionUID)
+            if (!string.IsNullOrEmpty(data.patchPanelID) && existing.patchPanelID == data.patchPanelID)
             {
                 patchPanels[i] = data;
                 return;
@@ -1907,7 +1877,8 @@ internal static class RackPlannerService
                 return false;
             }
 
-            if (!rack.IsPositionAvailable(arrayStart, sizeU))
+            var available = rack.IsPositionAvailable(arrayStart, sizeU);
+            if (!available)
             {
                 message = $"{template.DisplayName}: Ziel-Slots sind nicht frei.";
                 return false;
@@ -1969,6 +1940,7 @@ internal static class RackPlannerService
             {
                 Object.Destroy(instance);
                 message = $"{template.DisplayName}: UsableObject-Komponente fehlt.";
+                MelonLogger.Warning($"[RackPlanner] {message}");
                 return false;
             }
 
@@ -1999,7 +1971,6 @@ internal static class RackPlannerService
             var capturedLocalPos = template.LocalPos.ToUnity();
             var capturedLocalEuler = template.LocalEuler.ToUnity();
             var hasCapturedPose = capturedLocalPos.sqrMagnitude > 0.000001f || capturedLocalEuler.sqrMagnitude > 0.000001f;
-            VerboseLog($"[RackPlanner][SPAWN] {template.DisplayName} kind={template.Kind} sizeU={template.SizeInU} bottomPhysSlot={template.StartIndex} anchorPhysSlot={anchorPhysicalSlot} anchorArray={arrayStart} parentWorld={rackPosition.transform.position} capturedLocalPos={capturedLocalPos} capturedLocalEuler={capturedLocalEuler} hasCapturedPose={hasCapturedPose}");
 
             // Activate now -> Awake() runs with all fields set.
             try { instance.SetActive(true); } catch (Exception ex) { MelonLogger.Warning($"[RackPlanner] SetActive failed: {ex.Message}"); }
@@ -2016,23 +1987,6 @@ internal static class RackPlannerService
                     var server = instance.GetComponent<Server>();
                     if (server == null)
                         throw new InvalidOperationException("Server-Komponente fehlt.");
-
-                    // Capture the state Awake left the server in BEFORE we call
-                    // ServerInsertedInRack(null). The vanilla shop flow always feeds
-                    // ServerInsertedInRack a server that has a unique ServerID,
-                    // a generated IP, an assigned customer/app and a freshly rolled
-                    // timeToBrake/eolTime. If any of those are missing, the LOAD
-                    // path on the next save->reload cycle silently drops the entry.
-                    string preServerId = null;
-                    string preIp = null;
-                    int preServerType = -1, preAppId = -1, preTimeToBrake = -1, preEolTime = -1;
-                    try { preServerId = server.ServerID; } catch { /* defensive */ }
-                    try { preIp = server.IP; } catch { /* defensive */ }
-                    try { preServerType = server.serverType; } catch { /* defensive */ }
-                    try { preAppId = server.appID; } catch { /* defensive */ }
-                    try { preTimeToBrake = server.timeToBrake; } catch { /* defensive */ }
-                    try { preEolTime = server.eolTime; } catch { /* defensive */ }
-                    MelonLogger.Msg($"[RackPlanner][SPAWN-SRV][PRE-INSERT] name={instance.name} ServerID='{preServerId ?? "<null>"}' IP='{preIp ?? "<null>"}' serverType={preServerType} appID={preAppId} ttb={preTimeToBrake} eol={preEolTime} curRP={(server.currentRackPosition!=null?"set":"null")} rpUID={server.rackPositionUID}");
 
                     // Pass null = fresh-insert path. The game initialises a unique
                     // ServerID, valid IP, customer assignment, eolTime/timeToBrake
@@ -2051,11 +2005,10 @@ internal static class RackPlannerService
                         {
                             var newId = server.GenerateUniqueServerId();
                             if (!string.IsNullOrEmpty(newId)) server.ServerID = newId;
-                            MelonLogger.Msg($"[RackPlanner][SPAWN-SRV][FALLBACK-ID] generated ServerID='{server.ServerID}' for '{instance.name}'");
                         }
                         catch (Exception ex)
                         {
-                            MelonLogger.Warning($"[RackPlanner][SPAWN-SRV] GenerateUniqueServerId failed: {ex.Message}");
+                            MelonLogger.Warning($"[RackPlanner] GenerateUniqueServerId failed: {ex.Message}");
                         }
                     }
 
@@ -2077,7 +2030,7 @@ internal static class RackPlannerService
                         if (template.ServerType > 0 && server.serverType != template.ServerType)
                             server.serverType = template.ServerType;
                     }
-                    catch (Exception ex) { MelonLogger.Warning($"[RackPlanner][SPAWN-SRV] set serverType failed: {ex.Message}"); }
+                    catch (Exception ex) { MelonLogger.Warning($"[RackPlanner] set serverType failed: {ex.Message}"); }
 
                     try
                     {
@@ -2090,20 +2043,7 @@ internal static class RackPlannerService
                             server.ButtonClickChangeIP();
                         }
                     }
-                    catch (Exception ex) { MelonLogger.Warning($"[RackPlanner][SPAWN-SRV] ButtonClickChangeIP failed: {ex.Message}"); }
-
-                    // Capture POST state to compare with the manual flow.
-                    string postServerId = null;
-                    string postIp = null;
-                    int postServerType = -1, postAppId = -1, postTimeToBrake = -1, postEolTime = -1, postCustomer = -1;
-                    try { postServerId = server.ServerID; } catch { /* defensive */ }
-                    try { postIp = server.IP; } catch { /* defensive */ }
-                    try { postServerType = server.serverType; } catch { /* defensive */ }
-                    try { postAppId = server.appID; } catch { /* defensive */ }
-                    try { postTimeToBrake = server.timeToBrake; } catch { /* defensive */ }
-                    try { postEolTime = server.eolTime; } catch { /* defensive */ }
-                    try { postCustomer = server.GetCustomerID(); } catch { /* defensive */ }
-                    MelonLogger.Msg($"[RackPlanner][SPAWN-SRV][POST-INSERT] name={instance.name} ServerID='{postServerId ?? "<null>"}' IP='{postIp ?? "<null>"}' serverType={postServerType} appID={postAppId} customer={postCustomer} ttb={postTimeToBrake} eol={postEolTime} curRP={(server.currentRackPosition!=null?"set":"null")} rpUID={server.rackPositionUID} parent='{(instance.transform.parent!=null?instance.transform.parent.name:"<null>")}'");
+                    catch (Exception ex) { MelonLogger.Warning($"[RackPlanner] ButtonClickChangeIP failed: {ex.Message}"); }
 
                     // CRITICAL: NetworkSaveData()'s snapshot ctor iterates
                     // NetworkMap.servers (Dictionary<string, Server>) at save time.
@@ -2116,7 +2056,6 @@ internal static class RackPlannerService
                     if (!string.IsNullOrEmpty(server.ServerID))
                     {
                         PastedServerIds.Add(server.ServerID);
-                        MelonLogger.Msg($"[RackPlanner][SPAWN-SRV][TRACK-PASTED] ServerID='{server.ServerID}' sizeU={Math.Max(1, usableObject.sizeInU)} bottomPhysSlot={template.StartIndex} anchorPhysSlot={anchorPhysicalSlot} anchorUID={rackPosition.rackPosGlobalUID}");
                     }
                     if (!string.IsNullOrEmpty(template.Label)) server.labelText = template.Label;
                     if (server.isOn != template.IsPoweredOn)
@@ -2170,18 +2109,10 @@ internal static class RackPlannerService
             // observed. Mark NOW, post-insert, exactly like the coroutine does.
             try
             {
-                int beforeUsed = 0;
-                try { if (rack.isPositionUsed != null) for (var i = 0; i < rack.isPositionUsed.Count; i++) if (rack.isPositionUsed[i] != 0) beforeUsed++; } catch { /* defensive */ }
                 rack.MarkPositionAsUsed(arrayStart, sizeU);
                 rackPosition.SetUsed(true);
-                int afterUsed = 0;
-                try { if (rack.isPositionUsed != null) for (var i = 0; i < rack.isPositionUsed.Count; i++) if (rack.isPositionUsed[i] != 0) afterUsed++; } catch { /* defensive */ }
-                VerboseLog($"[RackPlanner][SPAWN-MARK] {template.DisplayName} anchorArray={arrayStart} sizeU={sizeU} anchorPhysSlot={anchorPhysicalSlot} rackPosIdx={rackPosition.positionIndex} anchorUID={rackPosition.rackPosGlobalUID} usedBefore={beforeUsed} usedAfter={afterUsed}");
             }
             catch (Exception ex) { MelonLogger.Warning($"[RackPlanner] post-insert MarkPositionAsUsed failed: {ex.Message}"); }
-
-            var postInsertLocal = targetRackTr.InverseTransformPoint(instance.transform.position);
-            VerboseLog($"[RackPlanner][SPAWN-AFTER-INSERT] {template.DisplayName} kind={template.Kind} sizeU={template.SizeInU} bottomPhysSlot={template.StartIndex} anchorPhysSlot={anchorPhysicalSlot} localPos={postInsertLocal} world={instance.transform.position} rot={instance.transform.eulerAngles}");
 
             // The InsertedInRack methods are required for IDs/state, but their visual
             // placement is based on the newly selected rackPosition and can interpret a
@@ -2193,7 +2124,6 @@ internal static class RackPlannerService
             {
                 instance.transform.position = targetRackTr.TransformPoint(capturedLocalPos);
                 instance.transform.rotation = targetRackTr.rotation * Quaternion.Euler(capturedLocalEuler);
-                VerboseLog($"[RackPlanner][SPAWN-POSE-CORRECTED] {template.DisplayName} kind={template.Kind} sizeU={template.SizeInU} physSlot={template.StartIndex} localPos={targetRackTr.InverseTransformPoint(instance.transform.position)} world={instance.transform.position} rot={instance.transform.eulerAngles}");
             }
             else if (sizeU > 1)
             {
@@ -2202,7 +2132,6 @@ internal static class RackPlannerService
                 if (pivotRackPosition != null)
                 {
                     instance.transform.position = pivotRackPosition.transform.position;
-                    VerboseLog($"[RackPlanner][SPAWN-PIVOT-FALLBACK] {template.DisplayName} kind={template.Kind} sizeU={template.SizeInU} bottomPhysSlot={template.StartIndex} pivotPhysSlot={pivotSlot} localPos={targetRackTr.InverseTransformPoint(instance.transform.position)} world={instance.transform.position} rot={instance.transform.eulerAngles}");
                 }
             }
 
@@ -2214,6 +2143,7 @@ internal static class RackPlannerService
         catch (Exception ex)
         {
             message = $"{template.DisplayName}: Fehler beim Einfügen – {ex.Message}";
+            MelonLogger.Error($"[RackPlanner] TrySpawnIntoRack failed: {ex}");
             return false;
         }
     }

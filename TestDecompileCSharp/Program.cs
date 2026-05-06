@@ -22,7 +22,7 @@ public sealed class LaptopButtonMod : MelonMod
 	{
 		HarmonyInstance.PatchAll(Assembly.GetExecutingAssembly());
 		RackPlannerService.InitializeSaveDiagnostics();
-		LoggerInstance.Msg("Demo-Laptop-Mod initialisiert. Hotkeys: F8 = state dump, F7 = baseline.");
+		LoggerInstance.Msg("Data Center Laptop Button Mod initialisiert. F6 repariert verwaiste Rack-Geräte.");
 	}
 
 	public override void OnUpdate()
