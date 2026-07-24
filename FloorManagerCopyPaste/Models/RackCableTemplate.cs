@@ -10,11 +10,12 @@ internal sealed class RackCableTemplate
     public float Length { get; init; }
 
     /// <summary>
-    /// Source-rack-LOCAL positions of every link/hook the original cable was routed
-    /// through – including the two endpoint attach points. Used to recreate the
-    /// cable on a target rack with the same prefab. Position [0] is end A's attach
-    /// point, the last position is end Bs attach point, and everything in between
-    /// is a hook/cable-management Transform local to the rack.
+    /// Source-rack-local positions of the cable's complete generated centreline,
+    /// including its two endpoint attachment points. The updated game derives this
+    /// path from its raw link/control transforms and inserts the points that form
+    /// corner bends. Keeping every generated point preserves the visible curve when
+    /// the cable is recreated; retaining only the raw link transforms can collapse a
+    /// routed cable to a straight endpoint-to-endpoint segment.
     /// </summary>
     public List<Vec3> LocalRoute { get; init; } = [];
     /// <summary>

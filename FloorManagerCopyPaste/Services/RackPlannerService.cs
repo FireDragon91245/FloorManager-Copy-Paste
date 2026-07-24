@@ -1016,7 +1016,6 @@ internal static class RackPlannerService
             float speed = 0f;
             Color color = Color.white;
             float length = 0f;
-            var worldWaypoints = new List<Vec3>();
             var localRoute = new List<Vec3>();
             bool fullyInside = true;
             int sfpA = -1, sfpB = -1;
@@ -1055,63 +1054,60 @@ internal static class RackPlannerService
                     var mat = positions.GetCableMaterial(pair.Key);
                     if (mat) color = mat.color;
 
-                    // Raw link transforms = ordered list of every Transform the cable
-                    // routes through (endpoint A → hooks/holders → endpoint B). This is
-                    // what the game itself stores per cable and what we need to recreate
-                    // the same path on a target rack with the same prefab.
-                    var rawTransforms = positions.GetRawLinkTransforms(pair.Key);
-                    var rawCount = rawTransforms?.Count ?? 0;
-
-                    // Path 1: hook transforms (preferred, gives the exact routing path).
-                    // We do NOT AABB-test these – cable physics often route along the back
-                    // of the rack frame (~1cm outside the slot-anchor bounds). Endpoint
-                    // containment (both ports on captured devices in this rack) is what
-                    // determines whether the cable belongs to this rack.
-                    if (rawTransforms is not null && rawCount >= 2)
+                    // GetCablePositions is the complete generated centreline used by
+                    // RedrawCable/CreateTubeMesh. In the current game it contains the
+                    // extra corner-bend samples produced from raw cable/link positions.
+                    // The old implementation merely used this list for length and then
+                    // preferred GetRawLinkTransforms; for an unhooked curved cable those
+                    // transforms are often only the two ports, so the pasted cable became
+                    // a flat A-to-B segment. Preserve every final-path point—downsampling
+                    // also visibly flattens tight corners.
+                    var finalPath = positions.GetCablePositions(pair.Key);
+                    if (finalPath is not null && finalPath.Count >= 2)
                     {
-                        for (var i = 0; i < rawCount; i++)
+                        Vector3? previous = null;
+                        for (var i = 0; i < finalPath.Count; i++)
                         {
-                            var tr = rawTransforms[i];
-                            if (!tr)
+                            var point = finalPath[i];
+                            localRoute.Add(Vec3.From(sourceTr.InverseTransformPoint(point)));
+                            if (previous.HasValue) length += Vector3.Distance(previous.Value, point);
+                            previous = point;
+                        }
+                    }
+
+                    // A cable can briefly have no generated path while it is being
+                    // edited. The raw cable positions retain its intersection/control
+                    // points and are a much better fallback than endpoint transforms.
+                    if (localRoute.Count < 2)
+                    {
+                        var rawPath = positions.GetRawCablePositions(pair.Key);
+                        if (rawPath is not null && rawPath.Count >= 2)
+                        {
+                            Vector3? previous = null;
+                            for (var i = 0; i < rawPath.Count; i++)
                             {
-                                continue;
+                                var point = rawPath[i];
+                                localRoute.Add(Vec3.From(sourceTr.InverseTransformPoint(point)));
+                                if (previous.HasValue) length += Vector3.Distance(previous.Value, point);
+                                previous = point;
                             }
-
-                            var local = sourceTr.InverseTransformPoint(tr.position);
-                            localRoute.Add(Vec3.From(local));
                         }
                     }
 
-                    // Always also read the rendered (line-renderer) positions: they give
-                    // us the cable length and serve as fallback when GetRawLinkTransforms
-                    // returns nothing (which happens for runtime-built cables that haven't
-                    // been re-saved yet).
-                    var pts = positions.GetCablePositions(pair.Key);
-                    var renderedCount = pts?.Count ?? 0;
-                    if (pts is not null)
+                    // Last-resort compatibility fallback for older CablePositions
+                    // implementations which expose transforms but no raw point list.
+                    if (localRoute.Count < 2)
                     {
-                        Vector3? prev = null;
-                        for (var i = 0; i < renderedCount; i++)
+                        var rawTransforms = positions.GetRawLinkTransforms(pair.Key);
+                        var rawCount = rawTransforms?.Count ?? 0;
+                        if (rawTransforms is not null && rawCount >= 2)
                         {
-                            var p = pts[i];
-                            worldWaypoints.Add(Vec3.From(p));
-                            if (prev.HasValue) length += Vector3.Distance(prev.Value, p);
-                            prev = p;
-                        }
-                    }
-
-                    // Path 2: fallback to rendered positions if no hooks were available.
-                    // Same rationale: trust endpoint containment, no AABB rejection.
-                    if (localRoute.Count < 2 && pts is not null && renderedCount >= 2)
-                    {
-                        // Downsample to keep the route compact (every Nth point + first/last).
-                        var step = Math.Max(1, renderedCount / 20);
-                        for (var i = 0; i < renderedCount; i++)
-                        {
-                            // Always keep first, last, and every Nth point.
-                            if (i != 0 && i != renderedCount - 1 && (i % step) != 0) continue;
-                            var local = sourceTr.InverseTransformPoint(pts[i]);
-                            localRoute.Add(Vec3.From(local));
+                            for (var i = 0; i < rawCount; i++)
+                            {
+                                var tr = rawTransforms[i];
+                                if (tr)
+                                    localRoute.Add(Vec3.From(sourceTr.InverseTransformPoint(tr.position)));
+                            }
                         }
                     }
 
@@ -1183,56 +1179,6 @@ internal static class RackPlannerService
 
     // ---------------------------------------------------------------- cable apply -----
 
-    /// <summary>
-    /// Builds a flat list of every Transform under <paramref name="rackRoot"/> together
-    /// with its rack-local position. Used to find the same hook/holder transforms in a
-    /// target rack that the original cable was routed through.
-    /// </summary>
-    private static List<(Transform tr, Vector3 local)> CollectRackTransforms(Transform rackRoot)
-    {
-        var result = new List<(Transform, Vector3)>();
-        if (!rackRoot) return result;
-        var stack = new Stack<Transform>();
-        stack.Push(rackRoot);
-        while (stack.Count > 0)
-        {
-            var cur = stack.Pop();
-            if (!cur) continue;
-            Vector3 local;
-            try
-            {
-                local = rackRoot.InverseTransformPoint(cur.position);
-            }
-            catch
-            {
-                local = Vector3.zero;
-            }
-
-            result.Add((cur, local));
-            for (var i = 0; i < cur.childCount; i++) stack.Push(cur.GetChild(i));
-        }
-
-        return result;
-    }
-
-    private static Transform FindClosestTransform(List<(Transform tr, Vector3 local)> all, Vector3 targetLocal,
-        float maxDist = 0.15f)
-    {
-        Transform best = null;
-        var bestSq = maxDist * maxDist;
-        foreach (var (tr, local) in all)
-        {
-            var d = (local - targetLocal).sqrMagnitude;
-            if (d < bestSq)
-            {
-                bestSq = d;
-                best = tr;
-            }
-        }
-
-        return best;
-    }
-
     private static void ApplyCables(RackTemplate template, RackRuntimeInfo targetRack, RackApplyResult result)
     {
         // Re-resolve devices currently in the target rack (the freshly-spawned ones
@@ -1255,8 +1201,6 @@ internal static class RackPlannerService
         }
 
         var rackTr = targetRack.Rack.transform;
-        var targetRackTransforms = CollectRackTransforms(rackTr);
-
         foreach (var cable in template.Cables)
         {
             try
@@ -1330,30 +1274,28 @@ internal static class RackPlannerService
                 // rack's world space and replace the two endpoints with the actual
                 // rope-attach points of the freshly-spawned devices.
                 var worldRoute = new Il2CppSystem.Collections.Generic.List<Vector3>();
-                var rawLinkRoute = new Il2CppSystem.Collections.Generic.List<Transform>();
+                var midPointPositions = new Il2CppSystem.Collections.Generic.List<Vector3>();
                 worldRoute.Add(attachA.position);
-                rawLinkRoute.Add(linkA.transform);
                 if (routeReversed)
                 {
                     for (var i = cable.LocalRoute.Count - 2; i >= 1; i--)
                     {
-                        worldRoute.Add(rackTr.TransformPoint(cable.LocalRoute[i].ToUnity()));
-                        var hook = FindClosestTransform(targetRackTransforms, cable.LocalRoute[i].ToUnity());
-                        if (hook && hook != linkA.transform && hook != linkB.transform) rawLinkRoute.Add(hook);
+                        var point = rackTr.TransformPoint(cable.LocalRoute[i].ToUnity());
+                        worldRoute.Add(point);
+                        midPointPositions.Add(point);
                     }
                 }
                 else
                 {
                     for (var i = 1; i < cable.LocalRoute.Count - 1; i++)
                     {
-                        worldRoute.Add(rackTr.TransformPoint(cable.LocalRoute[i].ToUnity()));
-                        var hook = FindClosestTransform(targetRackTransforms, cable.LocalRoute[i].ToUnity());
-                        if (hook && hook != linkA.transform && hook != linkB.transform) rawLinkRoute.Add(hook);
+                        var point = rackTr.TransformPoint(cable.LocalRoute[i].ToUnity());
+                        worldRoute.Add(point);
+                        midPointPositions.Add(point);
                     }
                 }
 
                 worldRoute.Add(attachB.position);
-                rawLinkRoute.Add(linkB.transform);
 
                 var startEp = BuildCableEndpointSaveData(devA, linkA, typeA);
                 var endEp = BuildCableEndpointSaveData(devB, linkB, typeB);
@@ -1378,7 +1320,11 @@ internal static class RackPlannerService
                     startPoint = startEp,
                     endPoint = endEp,
                     waypoints = worldRoute,
-                    midPointPositions = new Il2CppSystem.Collections.Generic.List<Vector3>(),
+                    // Current LoadCable reconstructs its runtime position dictionaries
+                    // from waypoints, while older/newer save paths may consult this
+                    // dedicated list. Populate both so curve/control points survive
+                    // paste and the following save/load cycle.
+                    midPointPositions = midPointPositions,
                     maxSpeed = cable.Speed,
                     cableColor = new Color(cable.ColorR, cable.ColorG, cable.ColorB, cable.ColorA)
                 };
