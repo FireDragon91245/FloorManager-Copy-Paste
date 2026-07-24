@@ -63,7 +63,7 @@ internal sealed class RackPlannerScreenController
 
     public GameObject EnsureScreen(GameObject mainScreen)
     {
-        if (_screenRoot != null) return _screenRoot;
+        if (_screenRoot) return _screenRoot;
         _screenRoot = BuildScreen(mainScreen);
         return _screenRoot;
     }
@@ -84,8 +84,8 @@ internal sealed class RackPlannerScreenController
         // currently selected/highlighted button. Otherwise the outline + highlight
         // colour remain "stuck" on the button as a ghost the next time the UI is shown.
         ClearSelectionAndHighlight();
-        if (_screenRoot != null) _screenRoot.SetActive(false);
-        if (mainScreen != null) mainScreen.SetActive(true);
+        if (_screenRoot) _screenRoot.SetActive(false);
+        if (mainScreen) mainScreen.SetActive(true);
     }
 
     /// <summary>
@@ -98,10 +98,10 @@ internal sealed class RackPlannerScreenController
     private static void ClearSelectionAndHighlight()
     {
         var es = EventSystem.current;
-        if (es == null) return;
+        if (!es) return;
 
         var selected = es.currentSelectedGameObject;
-        if (selected != null)
+        if (selected)
         {
             // Fire OnDeselect on the selected element
             ExecuteEvents.Execute(selected, new BaseEventData(es), ExecuteEvents.deselectHandler);
@@ -125,10 +125,10 @@ internal sealed class RackPlannerScreenController
         // triggered the navigation.
         ClearSelectionAndHighlight();
 
-        if (_mainPage != null) _mainPage.SetActive(page == Page.Main);
-        if (_floorPlanPage != null) _floorPlanPage.SetActive(page == Page.FloorPlan);
-        if (_planRacksPage != null) _planRacksPage.SetActive(page == Page.PlanRacks);
-        if (_viewTemplatesPage != null) _viewTemplatesPage.SetActive(page == Page.ViewTemplates);
+        if (_mainPage) _mainPage.SetActive(page == Page.Main);
+        if (_floorPlanPage) _floorPlanPage.SetActive(page == Page.FloorPlan);
+        if (_planRacksPage) _planRacksPage.SetActive(page == Page.PlanRacks);
+        if (_viewTemplatesPage) _viewTemplatesPage.SetActive(page == Page.ViewTemplates);
 
         switch (page)
         {
@@ -155,7 +155,7 @@ internal sealed class RackPlannerScreenController
     }
 
     private RackRuntimeInfo ResolveRack(Rack rack) =>
-        rack == null ? null : _racks.FirstOrDefault(r => r.Rack == rack);
+        !rack ? null : _racks.FirstOrDefault(r => r.Rack == rack);
 
     // ============================================================================
     // SCREEN ROOT
@@ -250,7 +250,7 @@ internal sealed class RackPlannerScreenController
             }
             finally
             {
-                if (EventSystem.current != null) EventSystem.current.SetSelectedGameObject(null);
+                if (EventSystem.current) EventSystem.current.SetSelectedGameObject(null);
             }
         }));
 
@@ -297,7 +297,7 @@ internal sealed class RackPlannerScreenController
 
         BuildButton(btnRow.transform, "Copy", () =>
         {
-            if (_floorPlanSelectedRack == null)
+            if (_floorPlanSelectedRack is null)
             {
                 _fpStatus.text = "No rack selected.";
                 return;
@@ -312,7 +312,7 @@ internal sealed class RackPlannerScreenController
         {
             try
             {
-                if (_floorPlanSelectedRack == null)
+                if (_floorPlanSelectedRack is null)
                 {
                     _fpStatus.text = "No rack selected.";
                     return;
@@ -370,7 +370,7 @@ internal sealed class RackPlannerScreenController
     {
         RefreshAll();
         _fpHeader.text = "Floor Plan";
-        if (_racks.Count > 0 && _floorPlanSelectedRack == null)
+        if (_racks.Count > 0 && _floorPlanSelectedRack is null)
             _floorPlanSelectedRack = _racks[0];
 
         RenderFloorMap(_fpFloorContent, _racks, r =>
@@ -380,7 +380,7 @@ internal sealed class RackPlannerScreenController
         }, _floorPlanSelectedRack, _fpZoom);
         RenderRackComponentSidebar(_fpSidebarContent, _floorPlanSelectedRack);
         if (string.IsNullOrEmpty(_fpStatus.text))
-            _fpStatus.text = _floorPlanSelectedRack == null
+            _fpStatus.text = _floorPlanSelectedRack is null
                 ? "No racks found."
                 : $"Selected: {_floorPlanSelectedRack.Label}";
     }
@@ -438,7 +438,7 @@ internal sealed class RackPlannerScreenController
         BuildButton(actions.transform, "Paste Template", () =>
         {
             var t = GetSelectedPlanTemplate();
-            if (t == null)
+            if (t is null)
             {
                 _prStatus.text = "No template selected.";
                 return;
@@ -448,7 +448,7 @@ internal sealed class RackPlannerScreenController
         }, 0f);
         BuildButton(actions.transform, "Paste from Clipboard", () =>
         {
-            if (RackPlannerService.Clipboard == null)
+            if (RackPlannerService.Clipboard is null)
             {
                 _prStatus.text = "Clipboard is empty.";
                 return;
@@ -494,7 +494,7 @@ internal sealed class RackPlannerScreenController
 
     private void ApplyToSelectedTarget(RackTemplate template, string description)
     {
-        if (_planRacksSelectedRack == null)
+        if (_planRacksSelectedRack is null)
         {
             _prStatus.text = "No target rack selected.";
             return;
@@ -515,9 +515,9 @@ internal sealed class RackPlannerScreenController
         // Show ALL racks so users can see the full floor – but flag every rack with
         // any installed device as "invalid paste target" so they can't accidentally
         // pick one. Empty racks remain valid drop targets.
-        bool IsOccupied(RackRuntimeInfo r) => r != null && r.UsedSlots > 0;
+        bool IsOccupied(RackRuntimeInfo r) => r is not null && r.UsedSlots > 0;
 
-        if (_planRacksSelectedRack == null || IsOccupied(_planRacksSelectedRack))
+        if (_planRacksSelectedRack is null || IsOccupied(_planRacksSelectedRack))
             _planRacksSelectedRack = _racks.FirstOrDefault(r => !IsOccupied(r));
 
         RenderFloorMap(
@@ -540,8 +540,8 @@ internal sealed class RackPlannerScreenController
 
         var t = GetSelectedPlanTemplate();
         var clip = RackPlannerService.Clipboard;
-        _prTemplateLabel.text = t == null
-            ? (clip == null ? "Template: – (clipboard empty)" : $"Clipboard ready · {clip.Devices.Count} devices")
+        _prTemplateLabel.text = t is null
+            ? (clip is null ? "Template: – (clipboard empty)" : $"Clipboard ready · {clip.Devices.Count} devices")
             : $"Template: {t.Name} · {t.Devices.Count} devices / {t.Cables.Count} cables";
 
         // Sidebar shows the *target* rack contents (likely empty) for confirmation
@@ -643,7 +643,7 @@ internal sealed class RackPlannerScreenController
                     }
                     finally
                     {
-                        if (EventSystem.current != null) EventSystem.current.SetSelectedGameObject(null);
+                        if (EventSystem.current) EventSystem.current.SetSelectedGameObject(null);
                     }
                 }));
 
@@ -671,7 +671,7 @@ internal sealed class RackPlannerScreenController
         var contentRect = content.GetComponent<RectTransform>();
         zoom = Mathf.Clamp(zoom, MinZoom, MaxZoom);
 
-        if (racks == null || racks.Count == 0)
+        if (racks is null || racks.Count == 0)
         {
             BuildLabel(content.transform, "No racks found.", 18f, TextAlignmentOptions.Center, Color.white);
             contentRect.sizeDelta = new Vector2(600f, 180f);
@@ -750,7 +750,7 @@ internal sealed class RackPlannerScreenController
             rt.anchoredPosition = new Vector2(posX, posY);
 
             var isSelected = rack == selected;
-            var invalid = isInvalid != null && isInvalid(rack);
+            var invalid = isInvalid is not null && isInvalid(rack);
             Color baseColor;
             if (invalid)
             {
@@ -798,7 +798,7 @@ internal sealed class RackPlannerScreenController
                 }
                 finally
                 {
-                    if (EventSystem.current != null) EventSystem.current.SetSelectedGameObject(null);
+                    if (EventSystem.current) EventSystem.current.SetSelectedGameObject(null);
                 }
             }));
 
@@ -892,7 +892,7 @@ internal sealed class RackPlannerScreenController
 
     private static int NearestClusterIndex(List<float> centres, float value)
     {
-        if (centres == null || centres.Count == 0) return 0;
+        if (centres is null || centres.Count == 0) return 0;
         var bestIdx = 0;
         var bestDist = Mathf.Abs(value - centres[0]);
         for (var i = 1; i < centres.Count; i++)
@@ -911,7 +911,7 @@ internal sealed class RackPlannerScreenController
     private void RenderRackComponentSidebar(GameObject content, RackRuntimeInfo rack)
     {
         ClearChildren(content.transform);
-        if (rack == null)
+        if (rack is null)
         {
             BuildLabel(content.transform, "No rack selected.", 14f, TextAlignmentOptions.Center,
                 new Color(0.85f, 0.9f, 1f, 1f));
@@ -941,7 +941,7 @@ internal sealed class RackPlannerScreenController
             // Compact one-line layout: a single pill containing "U01: SRV · Name"
             string text;
             Color color;
-            if (d == null)
+            if (d is null)
             {
                 text = $"U{slot + 1:00}  empty";
                 color = new Color(0.16f, 0.20f, 0.25f, 0.85f);
@@ -964,7 +964,7 @@ internal sealed class RackPlannerScreenController
     private void RenderTemplatePreview(GameObject content, RackTemplate template)
     {
         ClearChildren(content.transform);
-        if (template == null)
+        if (template is null)
         {
             BuildLabel(content.transform, "Select a template on the left to see the preview.", 16f,
                 TextAlignmentOptions.Center, new Color(0.85f, 0.9f, 1f, 1f));
@@ -998,7 +998,7 @@ internal sealed class RackPlannerScreenController
         BuildBlueprint(content.transform, template);
 
         // Cable list
-        if (template.Cables != null && template.Cables.Count > 0)
+        if (template.Cables is not null && template.Cables.Count > 0)
         {
             BuildDivider(content.transform);
             BuildSectionTitle(content.transform, "Cable Connections");
@@ -1055,10 +1055,10 @@ internal sealed class RackPlannerScreenController
 
             var d = occ[slot];
             var rowImg = row.AddComponent<Image>();
-            rowImg.color = d == null ? new Color(0.10f, 0.12f, 0.15f, 1f) : GetDeviceColor(d.Kind);
+            rowImg.color = d is null ? new Color(0.10f, 0.12f, 0.15f, 1f) : GetDeviceColor(d.Kind);
 
             var lbl = BuildLabel(row.transform,
-                d == null
+                d is null
                     ? $"U{slot + 1:00} – empty"
                     : (slot == d.StartIndex + DeviceSize(d) - 1
                         ? $"U{slot + 1:00}  {ShortDeviceType(d.Kind)} {d.DisplayName}"
@@ -1206,20 +1206,20 @@ internal sealed class RackPlannerScreenController
     /// </summary>
     private void AttachMouseWheelZoom(GameObject scrollRoot, Func<float> getZoom, Action<float> setZoom)
     {
-        if (scrollRoot == null) return;
+        if (!scrollRoot) return;
         // The viewport is the first child created by BuildScrollRegion.
         Transform viewport = null;
         for (var i = 0; i < scrollRoot.transform.childCount; i++)
         {
             var ch = scrollRoot.transform.GetChild(i);
-            if (ch != null && ch.name == "Viewport")
+            if (ch && ch.name == "Viewport")
             {
                 viewport = ch;
                 break;
             }
         }
 
-        if (viewport == null) return;
+        if (!viewport) return;
 
         WheelZoomBehaviour.EnsureRegistered();
         var handler = viewport.gameObject.AddComponent<WheelZoomBehaviour>();
@@ -1319,7 +1319,7 @@ internal sealed class RackPlannerScreenController
             string text = string.Empty;
             try
             {
-                text = _modalInput != null ? _modalInput.text ?? string.Empty : string.Empty;
+                text = _modalInput ? _modalInput.text ?? string.Empty : string.Empty;
             }
             catch (Exception ex)
             {
@@ -1343,7 +1343,7 @@ internal sealed class RackPlannerScreenController
 
     private void OpenModal(string prompt, string defaultValue, Action<string> callback)
     {
-        if (_modalRoot == null) return;
+        if (!_modalRoot) return;
         try
         {
             // IMPORTANT: activate FIRST. The TMP_InputField was built while the screen
@@ -1354,8 +1354,8 @@ internal sealed class RackPlannerScreenController
             _modalRoot.SetActive(true);
             _modalRoot.transform.SetAsLastSibling();
             _modalCallback = callback;
-            if (_modalPrompt != null) _modalPrompt.text = prompt;
-            if (_modalInput != null)
+            if (_modalPrompt) _modalPrompt.text = prompt;
+            if (_modalInput)
             {
                 try
                 {
@@ -1375,7 +1375,7 @@ internal sealed class RackPlannerScreenController
 
     private void CloseModal()
     {
-        if (_modalRoot != null) _modalRoot.SetActive(false);
+        if (_modalRoot) _modalRoot.SetActive(false);
         _modalCallback = null;
     }
 
@@ -1387,6 +1387,8 @@ internal sealed class RackPlannerScreenController
     {
         RackDeviceKind.Server => "SRV",
         RackDeviceKind.NetworkSwitch => "SWT",
+        RackDeviceKind.Router => "RTR",
+        RackDeviceKind.Firewall => "FW",
         RackDeviceKind.PatchPanel => "PP",
         _ => "DEV"
     };
@@ -1395,6 +1397,8 @@ internal sealed class RackPlannerScreenController
     {
         RackDeviceKind.Server => new Color(0.24f, 0.56f, 0.86f, 0.96f),
         RackDeviceKind.NetworkSwitch => new Color(0.23f, 0.74f, 0.45f, 0.96f),
+        RackDeviceKind.Router => new Color(0.16f, 0.72f, 0.78f, 0.96f),
+        RackDeviceKind.Firewall => new Color(0.88f, 0.38f, 0.20f, 0.96f),
         RackDeviceKind.PatchPanel => new Color(0.58f, 0.42f, 0.86f, 0.96f),
         _ => new Color(0.42f, 0.42f, 0.42f, 0.96f)
     };
@@ -1531,7 +1535,7 @@ internal sealed class RackPlannerScreenController
             {
                 // Drop selection right after the click so OnDeselect fires immediately
                 // and the highlighted/selected colour is cleared.
-                if (EventSystem.current != null) EventSystem.current.SetSelectedGameObject(null);
+                if (EventSystem.current) EventSystem.current.SetSelectedGameObject(null);
             }
         }));
         var lbl = BuildLabel(bo.transform, text, 14f, TextAlignmentOptions.Center, Color.white);
@@ -1600,7 +1604,7 @@ internal sealed class RackPlannerScreenController
     private static GameObject CreateUiObject(string name, Transform parent = null)
     {
         var go = new GameObject(name, Il2CppType.Of<RectTransform>());
-        if (parent != null) go.transform.SetParent(parent, false);
+        if (parent) go.transform.SetParent(parent, false);
         return go;
     }
 

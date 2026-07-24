@@ -1,4 +1,5 @@
-﻿using Il2Cpp;
+﻿using System.Collections.Generic;
+using Il2Cpp;
 
 namespace FloorManagerCopyPaste.Models;
 
@@ -25,6 +26,20 @@ internal sealed class RackDeviceTemplate
     /// server should behave like a freshly-bought one (its own IP, its own customer).
     /// </summary>
     public int ServerType { get; init; }
+
+    /// <summary>
+    /// Per-port VLAN exclusions shared by switches, routers, and firewalls.
+    /// The game persists these on <see cref="SwitchSaveData"/>.
+    /// </summary>
+    public List<NetworkPortVlanFilterTemplate> PortVlanFilters { get; init; } = [];
+
+    public int RouterAsn { get; init; }
+    public int RouterNextRouteId { get; init; } = 1;
+    public List<RouterOwnedSubnetTemplate> RouterOwnedSubnets { get; init; } = [];
+    public List<RouterRouteTemplate> RouterRoutes { get; init; } = [];
+
+    public string FirewallClusterIp { get; init; } = string.Empty;
+    public List<FirewallRuleTemplate> FirewallRules { get; init; } = [];
 
     /// <summary>
     /// Device's transform.position expressed in the SOURCE rack's local space.

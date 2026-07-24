@@ -51,6 +51,10 @@
       <HintPath>$(Il2CppAssembliesDir)\Il2Cppmscorlib.dll</HintPath>
       <Private>false</Private>
     </Reference>
+    <Reference Include="Il2CppSystem.Core">
+      <HintPath>$(Il2CppAssembliesDir)\Il2CppSystem.Core.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
     <Reference Include="Unity.TextMeshPro">
       <HintPath>$(Il2CppAssembliesDir)\Unity.TextMeshPro.dll</HintPath>
       <Private>false</Private>

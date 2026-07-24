@@ -4,7 +4,7 @@ using MelonLoader;
 using UnityEngine;
 
 [assembly:
-    MelonInfo(typeof(FloorManagerCopyPaste.FloorManagerCopyPasteMod), "Floor Manager: Copy & Paste", "0.2.5",
+    MelonInfo(typeof(FloorManagerCopyPaste.FloorManagerCopyPasteMod), "Floor Manager: Copy & Paste", "0.3.0",
         "FireDragon91245")]
 [assembly: MelonGame("Waseku", "Data Center")]
 [assembly:

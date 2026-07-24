@@ -55,12 +55,12 @@ internal sealed class WheelZoomBehaviour : MonoBehaviour
     {
         try
         {
-            if (!Target || OnWheelDelta == null) return;
+            if (!Target || OnWheelDelta is null) return;
 
             // Use the new Input System (legacy UnityEngine.Input throws because the
             // game's Player Settings has switched to "Input System Package").
             var mouse = Mouse.current;
-            if (mouse == null) return;
+            if (mouse is null) return;
 
             var dy = mouse.scroll.ReadValue().y;
             if (Mathf.Abs(dy) < 0.001f) return;

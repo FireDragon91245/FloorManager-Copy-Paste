@@ -87,7 +87,7 @@ internal static class RackPlannerService
         try
         {
             var network = EnsureNetworkSaveData();
-            if (network == null)
+            if (network is null)
             {
                 MelonLogger.Warning(" EnsureNetworkSaveData returned null");
                 return;
@@ -96,7 +96,7 @@ internal static class RackPlannerService
             var servers = Object.FindObjectsOfType<Server>();
             foreach (var s in servers)
             {
-                if (s == null) continue;
+                if (!s) continue;
                 RackPosition rp;
                 try
                 {
@@ -107,18 +107,60 @@ internal static class RackPlannerService
                     continue;
                 }
 
-                if (rp == null) continue;
+                if (!rp) continue;
                 EnsureValidRackPositionUid(rp);
                 var uo = s.GetComponent<UsableObject>();
-                if (uo == null) continue;
+                if (!uo) continue;
                 var data = BuildServerSaveData(s, uo, rp);
                 UpsertServerSaveData(network.servers, data);
+            }
+
+            var routers = Object.FindObjectsOfType<Router>();
+            foreach (var router in routers)
+            {
+                if (!router) continue;
+                RackPosition rp;
+                try
+                {
+                    rp = router.currentRackPosition;
+                }
+                catch
+                {
+                    continue;
+                }
+
+                if (!rp) continue;
+                EnsureValidRackPositionUid(rp);
+                var data = BuildRouterSaveData(router, rp);
+                UpsertRouterSaveData(network.routers, data);
+            }
+
+            var firewalls = Object.FindObjectsOfType<Firewall>();
+            foreach (var firewall in firewalls)
+            {
+                if (!firewall) continue;
+                RackPosition rp;
+                try
+                {
+                    rp = firewall.currentRackPosition;
+                }
+                catch
+                {
+                    continue;
+                }
+
+                if (!rp) continue;
+                EnsureValidRackPositionUid(rp);
+                var data = BuildFirewallSaveData(firewall, rp);
+                UpsertFirewallSaveData(network.firewalls, data);
             }
 
             var switches = Object.FindObjectsOfType<NetworkSwitch>();
             foreach (var sw in switches)
             {
-                if (sw == null) continue;
+                // NetworkSaveData's vanilla snapshot uses an exact-type filter here:
+                // Router and Firewall have their own strongly typed save lists.
+                if (!sw || sw.GetComponent<Router>() || sw.GetComponent<Firewall>()) continue;
                 RackPosition rp;
                 try
                 {
@@ -129,7 +171,7 @@ internal static class RackPlannerService
                     continue;
                 }
 
-                if (rp == null) continue;
+                if (!rp) continue;
                 EnsureValidRackPositionUid(rp);
                 var data = BuildSwitchSaveData(sw, rp);
                 UpsertSwitchSaveData(network.switches, data);
@@ -138,7 +180,7 @@ internal static class RackPlannerService
             var patches = Object.FindObjectsOfType<PatchPanel>();
             foreach (var pp in patches)
             {
-                if (pp == null) continue;
+                if (!pp) continue;
                 RackPosition rp;
                 try
                 {
@@ -149,7 +191,7 @@ internal static class RackPlannerService
                     continue;
                 }
 
-                if (rp == null) continue;
+                if (!rp) continue;
                 EnsureValidRackPositionUid(rp);
                 var data = BuildPatchPanelSaveData(pp, rp);
                 UpsertPatchPanelSaveData(network.patchPanels, data);
@@ -164,14 +206,14 @@ internal static class RackPlannerService
     public static TemplatePriceEstimate EstimatePrice(RackTemplate template)
     {
         var est = new TemplatePriceEstimate();
-        if (template == null) return est;
+        if (template is null) return est;
         foreach (var d in template.Devices)
         {
             est.DeviceBase += d.BasePrice;
             est.DeviceAdjusted += CalculateAdjustedPrice(d.BasePrice);
         }
 
-        if (template.Cables != null)
+        if (template.Cables is not null)
         {
             foreach (var c in template.Cables)
             {
@@ -187,7 +229,7 @@ internal static class RackPlannerService
 
     public static bool DeleteTemplate(IList<RackTemplate> templates, int index)
     {
-        if (templates == null || index < 0 || index >= templates.Count) return false;
+        if (templates is null || index < 0 || index >= templates.Count) return false;
         templates.RemoveAt(index);
         SaveTemplates(templates as List<RackTemplate> ?? templates.ToList());
         return true;
@@ -204,14 +246,14 @@ internal static class RackPlannerService
         try
         {
             var mgm = MainGameManager.instance;
-            if (mgm == null || mgm.rackPrefab == null)
+            if (!mgm || !mgm.rackPrefab)
             {
                 message = "Rack prefab is missing.";
                 return false;
             }
 
             var inst = Object.Instantiate(mgm.rackPrefab, worldPos, Quaternion.identity);
-            if (inst == null)
+            if (!inst)
             {
                 message = "Instantiation failed.";
                 return false;
@@ -234,7 +276,7 @@ internal static class RackPlannerService
         var devicesByRack = BuildDeviceMap();
 
         return racks
-            .Where(rack => rack && rack.positions != null)
+            .Where(rack => rack && rack.positions is not null)
             .Select((rack, index) =>
             {
                 var devices = devicesByRack.TryGetValue(rack, out var rackDevices)
@@ -319,7 +361,7 @@ internal static class RackPlannerService
             }
 
             var blockingDevice = FindBlockingDevice(device, occupancy);
-            if (blockingDevice == null)
+            if (blockingDevice is null)
             {
                 preview.Purchases.Add(CloneDeviceTemplate(device));
                 preview.BaseCost += device.BasePrice;
@@ -387,11 +429,11 @@ internal static class RackPlannerService
             var updatedMoney = Mathf.Max(0f, player!.money - successfulCosts);
             player.money = updatedMoney;
 
-            if (SaveData.instance?.playerData != null)
+            if (SaveData.instance?.playerData is not null)
                 SaveData.instance.playerData.coins = updatedMoney;
 
             var staticUi = StaticUIElements.instance;
-            if (staticUi != null && staticUi.topLeft_coinTXT != null)
+            if (staticUi && staticUi.topLeft_coinTXT)
                 staticUi.topLeft_coinTXT.text = Mathf.RoundToInt(updatedMoney).ToString();
 
             result.ChargedAmount = successfulCosts;
@@ -471,7 +513,7 @@ internal static class RackPlannerService
     private static List<RackPosition> GetPhysicalOrderPositions(Rack rack)
     {
         var list = new List<RackPosition>();
-        if (!rack || rack.positions == null) return list;
+        if (!rack || rack.positions is null) return list;
         list.AddRange(rack.positions.Where(p => p));
 
         var rackTr = rack.transform;
@@ -532,7 +574,7 @@ internal static class RackPlannerService
     private static int PhysicalToArrayIndex(Rack rack, int physicalSlot)
     {
         var pos = GetPositionByPhysicalSlot(rack, physicalSlot);
-        if (pos == null || rack?.positions == null) return -1;
+        if (!pos || rack?.positions is null) return -1;
         for (var i = 0; i < rack.positions.Count; i++)
             if (rack.positions[i] == pos)
                 return i;
@@ -559,7 +601,7 @@ internal static class RackPlannerService
     /// </summary>
     private static int ResolveBottomPhysicalSlotFromOwnerBitmap(Rack rack, RackPosition rackPosition)
     {
-        if (!rack || !rackPosition || rack.positions == null || rack.isPositionUsed == null)
+        if (!rack || !rackPosition || rack.positions is null || rack.isPositionUsed is null)
             return -1;
 
         var ownerUid = rackPosition.rackPosGlobalUID;
@@ -618,14 +660,14 @@ internal static class RackPlannerService
         // pixel-perfect on a target rack (same prefab → same local-to-world mapping).
         // This sidesteps any guesswork about prefab pivot / rack-position anchor offsets.
         var rackTr = rackPos?.rack?.transform;
-        var localPos = rackTr != null
+        var localPos = rackTr
             ? Vec3.From(rackTr.InverseTransformPoint(usableObject.transform.position))
             : default;
-        var localEuler = rackTr != null
+        var localEuler = rackTr
             ? Vec3.From((Quaternion.Inverse(rackTr.rotation) * usableObject.transform.rotation).eulerAngles)
             : default;
         server = usableObject.GetComponent<Server>();
-        if (server != null)
+        if (server)
         {
             template = new RackDeviceTemplate
             {
@@ -648,8 +690,58 @@ internal static class RackPlannerService
             return true;
         }
 
+        var firewall = usableObject.GetComponent<Firewall>();
+        if (firewall)
+        {
+            sw = firewall;
+            template = new RackDeviceTemplate
+            {
+                Kind = RackDeviceKind.Firewall,
+                StartIndex = startIndex,
+                SizeInU = sizeInU,
+                PrefabId = prefabId,
+                VariantId = firewall.switchType,
+                BasePrice = basePrice,
+                DisplayName = displayName,
+                Label = label,
+                IsPoweredOn = firewall.isOn,
+                LocalPos = localPos,
+                LocalEuler = localEuler,
+                PortVlanFilters = CaptureVlanFilters(firewall),
+                FirewallClusterIp = firewall.clusterIP ?? string.Empty,
+                FirewallRules = CaptureFirewallRules(firewall)
+            };
+            return true;
+        }
+
+        var router = usableObject.GetComponent<Router>();
+        if (router)
+        {
+            sw = router;
+            template = new RackDeviceTemplate
+            {
+                Kind = RackDeviceKind.Router,
+                StartIndex = startIndex,
+                SizeInU = sizeInU,
+                PrefabId = prefabId,
+                VariantId = router.switchType,
+                BasePrice = basePrice,
+                DisplayName = displayName,
+                Label = label,
+                IsPoweredOn = router.isOn,
+                LocalPos = localPos,
+                LocalEuler = localEuler,
+                PortVlanFilters = CaptureVlanFilters(router),
+                RouterAsn = router.asn,
+                RouterNextRouteId = Math.Max(1, router.nextRouteId),
+                RouterOwnedSubnets = CaptureRouterOwnedSubnets(router),
+                RouterRoutes = CaptureRouterRoutes(router)
+            };
+            return true;
+        }
+
         sw = usableObject.GetComponent<NetworkSwitch>();
-        if (sw != null)
+        if (sw)
         {
             template = new RackDeviceTemplate
             {
@@ -663,13 +755,14 @@ internal static class RackPlannerService
                 Label = label,
                 IsPoweredOn = sw.isOn,
                 LocalPos = localPos,
-                LocalEuler = localEuler
+                LocalEuler = localEuler,
+                PortVlanFilters = CaptureVlanFilters(sw)
             };
             return true;
         }
 
         patch = usableObject.GetComponent<PatchPanel>();
-        if (patch != null)
+        if (patch)
         {
             // Patch panels are visually 2U in this game; usableObject.sizeInU is sometimes
             // reported as 1, so we clamp to a minimum of 2 to keep blueprints/sidebar
@@ -698,12 +791,165 @@ internal static class RackPlannerService
         return false;
     }
 
+    private static List<NetworkPortVlanFilterTemplate> CaptureVlanFilters(NetworkSwitch networkSwitch)
+    {
+        var result = new List<NetworkPortVlanFilterTemplate>();
+        if (!networkSwitch || networkSwitch.disallowedVlansPerPort is null) return result;
+
+        foreach (var entry in networkSwitch.disallowedVlansPerPort)
+        {
+            var vlanIds = new List<int>();
+            if (entry.Value is not null)
+            {
+                foreach (var vlanId in entry.Value)
+                    vlanIds.Add(vlanId);
+            }
+
+            result.Add(new NetworkPortVlanFilterTemplate
+            {
+                PortIndex = entry.Key,
+                DisallowedVlanIds = vlanIds
+            });
+        }
+
+        return result;
+    }
+
+    private static void RestoreVlanFilters(NetworkSwitch networkSwitch, RackDeviceTemplate template)
+    {
+        var filters =
+            new Il2CppSystem.Collections.Generic.Dictionary<int, Il2CppSystem.Collections.Generic.HashSet<int>>();
+        foreach (var entry in template.PortVlanFilters ?? [])
+        {
+            var vlanIds = new Il2CppSystem.Collections.Generic.HashSet<int>();
+            foreach (var vlanId in entry.DisallowedVlanIds ?? [])
+                vlanIds.Add(vlanId);
+            filters[entry.PortIndex] = vlanIds;
+        }
+
+        networkSwitch.SetDisallowedVlansPerPort(filters);
+    }
+
+    private static List<RouterOwnedSubnetTemplate> CaptureRouterOwnedSubnets(Router router)
+    {
+        var result = new List<RouterOwnedSubnetTemplate>();
+        if (!router || router.ownedSubnets is null) return result;
+
+        foreach (var subnet in router.ownedSubnets)
+        {
+            if (subnet is null) continue;
+            result.Add(new RouterOwnedSubnetTemplate
+            {
+                VlanId = subnet.vlanId,
+                SubnetCidr = subnet.subnetCidr ?? string.Empty
+            });
+        }
+
+        return result;
+    }
+
+    private static List<RouterRouteTemplate> CaptureRouterRoutes(Router router)
+    {
+        var result = new List<RouterRouteTemplate>();
+        if (!router || router.routes is null) return result;
+
+        foreach (var route in router.routes)
+        {
+            if (route is null) continue;
+            result.Add(new RouterRouteTemplate
+            {
+                RouteId = route.routeId,
+                SourceVlanId = route.sourceVlanId,
+                SourceIp = route.sourceIp ?? string.Empty,
+                TargetVlanId = route.targetVlanId,
+                TargetIp = route.targetIp ?? string.Empty
+            });
+        }
+
+        return result;
+    }
+
+    private static void RestoreRouterConfiguration(Router router, RackDeviceTemplate template)
+    {
+        var subnets = new Il2CppSystem.Collections.Generic.List<Router.OwnedSubnet>();
+        foreach (var subnet in template.RouterOwnedSubnets ?? [])
+        {
+            subnets.Add(new Router.OwnedSubnet
+            {
+                vlanId = subnet.VlanId,
+                subnetCidr = subnet.SubnetCidr ?? string.Empty
+            });
+        }
+
+        var routes = new Il2CppSystem.Collections.Generic.List<Router.RouteEntry>();
+        var largestRouteId = 0;
+        foreach (var route in template.RouterRoutes ?? [])
+        {
+            largestRouteId = Math.Max(largestRouteId, route.RouteId);
+            routes.Add(new Router.RouteEntry
+            {
+                routeId = route.RouteId,
+                sourceVlanId = route.SourceVlanId,
+                sourceIp = route.SourceIp ?? string.Empty,
+                targetVlanId = route.TargetVlanId,
+                targetIp = route.TargetIp ?? string.Empty
+            });
+        }
+
+        var nextRouteId = Math.Max(Math.Max(1, template.RouterNextRouteId), largestRouteId + 1);
+        router.ApplyConfigSnapshot(template.RouterAsn, subnets, routes, nextRouteId);
+    }
+
+    private static List<FirewallRuleTemplate> CaptureFirewallRules(Firewall firewall)
+    {
+        var result = new List<FirewallRuleTemplate>();
+        if (!firewall || firewall.filterRules is null) return result;
+
+        foreach (var rule in firewall.filterRules)
+        {
+            if (rule is null) continue;
+            result.Add(new FirewallRuleTemplate
+            {
+                PortIndex = rule.portIndex,
+                SourceIpCidr = rule.sourceIpCidr ?? string.Empty,
+                DestinationIpCidr = rule.destIpCidr ?? string.Empty,
+                NetworkPort = rule.networkPort,
+                Protocol = (int)rule.protocol,
+                Bidirectional = rule.bidirectional,
+                Allow = rule.allow
+            });
+        }
+
+        return result;
+    }
+
+    private static void RestoreFirewallConfiguration(Firewall firewall, RackDeviceTemplate template)
+    {
+        firewall.clusterIP = template.FirewallClusterIp ?? string.Empty;
+        var rules = new Il2CppSystem.Collections.Generic.List<Firewall.FilterRule>();
+        foreach (var rule in template.FirewallRules ?? [])
+        {
+            rules.Add(new Firewall.FilterRule
+            {
+                portIndex = rule.PortIndex,
+                sourceIpCidr = rule.SourceIpCidr ?? string.Empty,
+                destIpCidr = rule.DestinationIpCidr ?? string.Empty,
+                networkPort = rule.NetworkPort,
+                protocol = (Firewall.Protocol)rule.Protocol,
+                bidirectional = rule.Bidirectional,
+                allow = rule.Allow
+            });
+        }
+
+        firewall.filterRules = rules;
+    }
+
     // ---------------------------------------------------------------- cable capture -----
 
     private static List<RackCableTemplate> CaptureRackCables(Rack sourceRack, List<DeviceWithRuntime> rackDevices)
     {
         var cables = new List<RackCableTemplate>();
-        if (rackDevices == null || rackDevices.Count == 0 || sourceRack == null)
+        if (rackDevices is null || rackDevices.Count == 0 || !sourceRack)
         {
             return cables;
         }
@@ -714,11 +960,11 @@ internal static class RackPlannerService
         {
             var d = rackDevices[i];
             var ports = GetCableLinkPorts(d);
-            if (ports == null) continue;
+            if (ports is null) continue;
             for (var p = 0; p < ports.Count; p++)
             {
                 var link = ports[p];
-                if (link == null)
+                if (!link)
                 {
                     continue;
                 }
@@ -804,10 +1050,10 @@ internal static class RackPlannerService
 
             try
             {
-                if (positions != null)
+                if (positions)
                 {
                     var mat = positions.GetCableMaterial(pair.Key);
-                    if (mat != null) color = mat.color;
+                    if (mat) color = mat.color;
 
                     // Raw link transforms = ordered list of every Transform the cable
                     // routes through (endpoint A → hooks/holders → endpoint B). This is
@@ -821,12 +1067,12 @@ internal static class RackPlannerService
                     // of the rack frame (~1cm outside the slot-anchor bounds). Endpoint
                     // containment (both ports on captured devices in this rack) is what
                     // determines whether the cable belongs to this rack.
-                    if (rawTransforms != null && rawCount >= 2)
+                    if (rawTransforms is not null && rawCount >= 2)
                     {
                         for (var i = 0; i < rawCount; i++)
                         {
                             var tr = rawTransforms[i];
-                            if (tr == null)
+                            if (!tr)
                             {
                                 continue;
                             }
@@ -842,7 +1088,7 @@ internal static class RackPlannerService
                     // been re-saved yet).
                     var pts = positions.GetCablePositions(pair.Key);
                     var renderedCount = pts?.Count ?? 0;
-                    if (pts != null)
+                    if (pts is not null)
                     {
                         Vector3? prev = null;
                         for (var i = 0; i < renderedCount; i++)
@@ -856,7 +1102,7 @@ internal static class RackPlannerService
 
                     // Path 2: fallback to rendered positions if no hooks were available.
                     // Same rationale: trust endpoint containment, no AABB rejection.
-                    if (localRoute.Count < 2 && pts != null && renderedCount >= 2)
+                    if (localRoute.Count < 2 && pts is not null && renderedCount >= 2)
                     {
                         // Downsample to keep the route compact (every Nth point + first/last).
                         var step = Math.Max(1, renderedCount / 20);
@@ -929,9 +1175,9 @@ internal static class RackPlannerService
 
     private static Il2CppReferenceArray<CableLink> GetCableLinkPorts(DeviceWithRuntime d)
     {
-        if (d.Server != null) return d.Server.cablelinks;
-        if (d.Switch != null) return d.Switch.cableLinkSwitchPorts;
-        if (d.Patch != null) return d.Patch.cableLinkPorts;
+        if (d.Server) return d.Server.cablelinks;
+        if (d.Switch) return d.Switch.cableLinkSwitchPorts;
+        if (d.Patch) return d.Patch.cableLinkPorts;
         return null;
     }
 
@@ -945,13 +1191,13 @@ internal static class RackPlannerService
     private static List<(Transform tr, Vector3 local)> CollectRackTransforms(Transform rackRoot)
     {
         var result = new List<(Transform, Vector3)>();
-        if (rackRoot == null) return result;
+        if (!rackRoot) return result;
         var stack = new Stack<Transform>();
         stack.Push(rackRoot);
         while (stack.Count > 0)
         {
             var cur = stack.Pop();
-            if (cur == null) continue;
+            if (!cur) continue;
             Vector3 local;
             try
             {
@@ -1002,7 +1248,7 @@ internal static class RackPlannerService
         var byStart = targetDevices.ToDictionary(d => d.Template.StartIndex);
 
         var positions = CablePositions.instance;
-        if (positions == null)
+        if (!positions)
         {
             result.Messages.Add("Cable clone: CablePositions.instance is missing.");
             return;
@@ -1015,7 +1261,7 @@ internal static class RackPlannerService
         {
             try
             {
-                if (!cable.FullyInsideSourceRack || cable.LocalRoute == null || cable.LocalRoute.Count < 2)
+                if (!cable.FullyInsideSourceRack || cable.LocalRoute is null || cable.LocalRoute.Count < 2)
                 {
                     result.CablesFailed++;
                     continue;
@@ -1023,7 +1269,7 @@ internal static class RackPlannerService
 
                 var devA = FindForTemplateIndex(cable.EndA.DeviceIndex);
                 var devB = FindForTemplateIndex(cable.EndB.DeviceIndex);
-                if (devA == null || devB == null)
+                if (devA is null || devB is null)
                 {
                     result.CablesFailed++;
                     continue;
@@ -1031,7 +1277,7 @@ internal static class RackPlannerService
 
                 var portsA = GetCableLinkPorts(devA);
                 var portsB = GetCableLinkPorts(devB);
-                if (portsA == null || portsB == null
+                if (portsA is null || portsB is null
                                    || cable.EndA.PortIndex < 0 || cable.EndA.PortIndex >= portsA.Count
                                    || cable.EndB.PortIndex < 0 || cable.EndB.PortIndex >= portsB.Count)
                 {
@@ -1041,7 +1287,7 @@ internal static class RackPlannerService
 
                 var linkA = portsA[cable.EndA.PortIndex];
                 var linkB = portsB[cable.EndB.PortIndex];
-                if (linkA == null || linkB == null)
+                if (!linkA || !linkB)
                 {
                     result.CablesFailed++;
                     continue;
@@ -1055,7 +1301,7 @@ internal static class RackPlannerService
 
                 var attachA = linkA.GetRopeAttachPoint();
                 var attachB = linkB.GetRopeAttachPoint();
-                if (attachA == null || attachB == null)
+                if (!attachA || !attachB)
                 {
                     result.CablesFailed++;
                     continue;
@@ -1093,7 +1339,7 @@ internal static class RackPlannerService
                     {
                         worldRoute.Add(rackTr.TransformPoint(cable.LocalRoute[i].ToUnity()));
                         var hook = FindClosestTransform(targetRackTransforms, cable.LocalRoute[i].ToUnity());
-                        if (hook != null && hook != linkA.transform && hook != linkB.transform) rawLinkRoute.Add(hook);
+                        if (hook && hook != linkA.transform && hook != linkB.transform) rawLinkRoute.Add(hook);
                     }
                 }
                 else
@@ -1102,7 +1348,7 @@ internal static class RackPlannerService
                     {
                         worldRoute.Add(rackTr.TransformPoint(cable.LocalRoute[i].ToUnity()));
                         var hook = FindClosestTransform(targetRackTransforms, cable.LocalRoute[i].ToUnity());
-                        if (hook != null && hook != linkA.transform && hook != linkB.transform) rawLinkRoute.Add(hook);
+                        if (hook && hook != linkA.transform && hook != linkB.transform) rawLinkRoute.Add(hook);
                     }
                 }
 
@@ -1199,27 +1445,16 @@ internal static class RackPlannerService
             // Save/load matches endpoints against the actual port/link position, not
             // the rope attach transform (which is offset from the port). Using the
             // attachment point here creates a visually present but non-persistent cable.
-            position = link != null ? link.transform.position : Vector3.zero,
-            customerID = dev?.Server != null ? dev.Server.GetCustomerID() : -1,
-            switchID = dev?.Switch != null ? GetSwitchId(dev.Switch) : string.Empty,
-            serverID = dev?.Server != null ? (dev.Server.ServerID ?? string.Empty) : string.Empty
+            position = link ? link.transform.position : Vector3.zero,
+            customerID = dev is not null && dev.Server ? dev.Server.GetCustomerID() : -1,
+            switchID = dev is not null && dev.Switch ? GetSwitchId(dev.Switch) : string.Empty,
+            serverID = dev is not null && dev.Server ? (dev.Server.ServerID ?? string.Empty) : string.Empty
         };
     }
 
     private static string GetSwitchId(NetworkSwitch sw)
     {
-        if (sw == null) return string.Empty;
-        try
-        {
-            var id = sw.GetSwitchId();
-            if (!string.IsNullOrEmpty(id)) return id;
-        }
-        catch
-        {
-            /* fallback */
-        }
-
-        return sw.switchId ?? string.Empty;
+        return sw ? sw.switchId ?? string.Empty : string.Empty;
     }
 
     /// <summary>
@@ -1234,14 +1469,14 @@ internal static class RackPlannerService
     private static void RegisterCableWithVanillaRouting(int cableId, CableSaveData saveData,
         Il2CppSystem.Collections.Generic.List<Vector3> worldRoute)
     {
-        if (cableId <= 0 || saveData == null) return;
+        if (cableId <= 0 || saveData is null) return;
 
         // (a) WaypointInitializationSystem.UpdateCableInfo — adds to the dict the
         // save serializer iterates. This is THE registration that was missing.
         try
         {
             var wis = WaypointInitializationSystem.Instance;
-            if (wis == null)
+            if (wis is null)
             {
                 MelonLogger.Warning("WaypointInitializationSystem.Instance is null; cable will NOT be saved");
             }
@@ -1256,7 +1491,7 @@ internal static class RackPlannerService
                 try
                 {
                     var dict = wis.cables;
-                    if (dict != null) dict[cableId] = info;
+                    if (dict is not null) dict[cableId] = info;
                     else MelonLogger.Warning($"wis.cables is null for {cableId}");
                 }
                 catch (Exception exDict)
@@ -1277,7 +1512,7 @@ internal static class RackPlannerService
         try
         {
             var nm = NetworkMap.instance;
-            if (nm != null)
+            if (nm)
             {
                 nm.RegisterCableConnection(
                     cableId,
@@ -1325,7 +1560,7 @@ internal static class RackPlannerService
 
     private static WaypointInitializationSystem.CableEndpoint BuildCableEndpoint(CableEndpointSaveData ep)
     {
-        if (ep == null) return new WaypointInitializationSystem.CableEndpoint();
+        if (ep is null) return new WaypointInitializationSystem.CableEndpoint();
         return new WaypointInitializationSystem.CableEndpoint
         {
             Type = ep.type,
@@ -1339,25 +1574,25 @@ internal static class RackPlannerService
     private static void FinalizeCableLink(CableLink link, DeviceWithRuntime dev, int cableId, bool isEndPoint,
         CableLink.TypeOfLink type, float speed, int sfpType)
     {
-        if (link == null) return;
+        if (!link) return;
 
         link.cableIDsOnLink = cableId;
         link.isStartOrEnd = true;
         link.isEndPoint = isEndPoint;
         link.typeOfLink = type;
-        if (dev?.Server != null)
+        if (dev is not null && dev.Server)
         {
             link.parentServer = dev.Server;
             link.CustomerID = dev.Server.GetCustomerID();
         }
 
-        if (dev?.Switch != null)
+        if (dev is not null && dev.Switch)
         {
             link.parentSwitch = dev.Switch;
             link.switchID = GetSwitchId(dev.Switch);
         }
 
-        if (dev?.Patch != null)
+        if (dev is not null && dev.Patch)
             link.parentPatchPanel = dev.Patch;
 
         if (speed > 0f)
@@ -1378,7 +1613,7 @@ internal static class RackPlannerService
 
     private static void EnsureSfpInserted(CableLink link, int sfpType, float speed)
     {
-        if (link == null || sfpType < 0) return;
+        if (!link || sfpType < 0) return;
 
         SFPModule module = null;
         try
@@ -1390,18 +1625,18 @@ internal static class RackPlannerService
             /* fallback */
         }
 
-        if (module == null)
+        if (!module)
         {
             try
             {
                 var prefabs = MainGameManager.instance?.sfpPrefabs;
-                if (prefabs != null && sfpType < prefabs.Count)
+                if (prefabs is not null && sfpType < prefabs.Count)
                 {
                     var prefab = prefabs[sfpType];
-                    if (prefab != null)
+                    if (prefab)
                     {
                         var inst = Object.Instantiate(prefab, link.transform.position, link.transform.rotation);
-                        module = inst != null ? inst.GetComponent<SFPModule>() : null;
+                        module = inst ? inst.GetComponent<SFPModule>() : null;
                     }
                 }
             }
@@ -1411,7 +1646,7 @@ internal static class RackPlannerService
             }
         }
 
-        if (module != null)
+        if (module)
         {
             try
             {
@@ -1487,7 +1722,7 @@ internal static class RackPlannerService
     {
         try
         {
-            if (SaveData.instance != null) return SaveData.instance;
+            if (SaveData.instance is not null) return SaveData.instance;
         }
         catch
         {
@@ -1507,11 +1742,13 @@ internal static class RackPlannerService
     private static NetworkSaveData EnsureNetworkSaveData()
     {
         var save = GetCurrentSaveData();
-        if (save == null) return null;
+        if (save is null) return null;
 
         save.networkData ??= new NetworkSaveData();
         save.networkData.servers ??= new Il2CppSystem.Collections.Generic.List<ServerSaveData>();
         save.networkData.switches ??= new Il2CppSystem.Collections.Generic.List<SwitchSaveData>();
+        save.networkData.routers ??= new Il2CppSystem.Collections.Generic.List<RouterSaveData>();
+        save.networkData.firewalls ??= new Il2CppSystem.Collections.Generic.List<FirewallSaveData>();
         save.networkData.patchPanels ??= new Il2CppSystem.Collections.Generic.List<PatchPanelSaveData>();
         save.networkData.cables ??= new Il2CppSystem.Collections.Generic.List<CableSaveData>();
         save.networkData.sfpModules ??= new Il2CppSystem.Collections.Generic.List<SFPSaveData>();
@@ -1563,11 +1800,11 @@ internal static class RackPlannerService
     /// </summary>
     private static void AddSfpToCurrentSave(SFPModule module, CableLink link, int sfpType)
     {
-        if (link == null || sfpType < 0) return;
+        if (!link || sfpType < 0) return;
         try
         {
             var network = EnsureNetworkSaveData();
-            if (network?.sfpModules == null) return;
+            if (network?.sfpModules is null) return;
 
             var portPosition = link.transform.position;
             foreach (var existing in network.sfpModules)
@@ -1577,11 +1814,11 @@ internal static class RackPlannerService
                     return;
             }
 
-            var tr = module != null ? module.transform : link.transform;
+            var tr = module ? module.transform : link.transform;
             var prefabId = sfpType;
             try
             {
-                if (module != null) prefabId = module.prefabID;
+                if (module) prefabId = module.prefabID;
             }
             catch
             {
@@ -1619,7 +1856,7 @@ internal static class RackPlannerService
     /// </summary>
     private static void EnsureValidRackPositionUid(RackPosition pos)
     {
-        if (pos == null) return;
+        if (!pos) return;
 
         int currentUid;
         try
@@ -1647,13 +1884,13 @@ internal static class RackPlannerService
 
     private static bool RackPositionUidIsUsedByAnotherPosition(RackPosition pos, int uid)
     {
-        if (pos == null || uid <= 0) return false;
+        if (!pos || uid <= 0) return false;
         try
         {
             var allPositions = Object.FindObjectsOfType<RackPosition>();
             foreach (var other in allPositions)
             {
-                if (other == null || ReferenceEquals(other, pos)) continue;
+                if (!other || ReferenceEquals(other, pos)) continue;
                 try
                 {
                     if (other.rackPosGlobalUID == uid) return true;
@@ -1680,7 +1917,7 @@ internal static class RackPlannerService
             var allPositions = Object.FindObjectsOfType<RackPosition>();
             foreach (var pos in allPositions)
             {
-                if (pos == null) continue;
+                if (!pos) continue;
                 try
                 {
                     if (pos.rackPosGlobalUID > maxUid) maxUid = pos.rackPosGlobalUID;
@@ -1699,7 +1936,7 @@ internal static class RackPlannerService
         try
         {
             var save = SaveData.instance;
-            if (save != null && save.lastUsedRackPositionGlobalUID > maxUid)
+            if (save is not null && save.lastUsedRackPositionGlobalUID > maxUid)
                 maxUid = save.lastUsedRackPositionGlobalUID;
         }
         catch
@@ -1714,7 +1951,7 @@ internal static class RackPlannerService
         try
         {
             var save = SaveData.instance;
-            if (save != null && save.lastUsedRackPositionGlobalUID < newUid)
+            if (save is not null && save.lastUsedRackPositionGlobalUID < newUid)
                 save.lastUsedRackPositionGlobalUID = newUid;
         }
         catch
@@ -1754,11 +1991,11 @@ internal static class RackPlannerService
             try
             {
                 var nm = NetworkMap.instance;
-                if (nm != null)
+                if (nm)
                 {
                     foreach (var srv in Object.FindObjectsOfType<Server>())
                     {
-                        if (srv == null) continue;
+                        if (!srv) continue;
                         try
                         {
                             nm.RegisterServer(srv);
@@ -1771,7 +2008,7 @@ internal static class RackPlannerService
 
                     foreach (var sw in Object.FindObjectsOfType<NetworkSwitch>())
                     {
-                        if (sw == null) continue;
+                        if (!sw) continue;
                         try
                         {
                             nm.RegisterSwitch(sw);
@@ -1791,11 +2028,11 @@ internal static class RackPlannerService
             var allUsable = Object.FindObjectsOfType<UsableObject>();
             foreach (var uo in allUsable)
             {
-                if (uo == null) continue;
+                if (!uo) continue;
                 bool needsRelink;
                 try
                 {
-                    needsRelink = uo.currentRackPosition == null;
+                    needsRelink = !uo.currentRackPosition;
                 }
                 catch
                 {
@@ -1804,18 +2041,18 @@ internal static class RackPlannerService
 
                 if (!needsRelink) continue;
 
-                // Only repair components that are server/switch/patchPanel.
-                var hasServer = uo.GetComponent<Server>() != null;
-                var hasSwitch = uo.GetComponent<NetworkSwitch>() != null;
-                var hasPatch = uo.GetComponent<PatchPanel>() != null;
-                if (!hasServer && !hasSwitch && !hasPatch) continue;
+                // Only repair rack-mounted network devices.
+                var server = uo.GetComponent<Server>();
+                var networkSwitch = uo.GetComponent<NetworkSwitch>();
+                var patchPanel = uo.GetComponent<PatchPanel>();
+                if (!server && !networkSwitch && !patchPanel) continue;
 
                 var uoPos = uo.transform.position;
                 RackPosition best = null;
                 var bestDist = 0.6f * 0.6f;
                 foreach (var p in allPositions)
                 {
-                    if (p == null || p.rack == null) continue;
+                    if (!p || !p.rack) continue;
                     var d = (p.transform.position - uoPos).sqrMagnitude;
                     if (d < bestDist)
                     {
@@ -1824,7 +2061,7 @@ internal static class RackPlannerService
                     }
                 }
 
-                if (best == null) continue;
+                if (!best) continue;
                 try
                 {
                     uo.currentRackPosition = best;
@@ -1860,7 +2097,7 @@ internal static class RackPlannerService
     private static void SyncMountedDeviceWithVanillaState(Rack rack, RackPosition rackPosition,
         RackDeviceTemplate template, UsableObject usableObject)
     {
-        if (rack == null || rackPosition == null || usableObject == null || template == null) return;
+        if (!rack || !rackPosition || !usableObject || template is null) return;
 
         try
         {
@@ -1901,7 +2138,7 @@ internal static class RackPlannerService
             for (var s = template.StartIndex; s < template.StartIndex + sizeU; s++)
             {
                 var pos = GetPositionByPhysicalSlot(rack, s);
-                if (pos != null)
+                if (pos)
                 {
                     try
                     {
@@ -1934,18 +2171,34 @@ internal static class RackPlannerService
     private static void UpsertMountedDeviceSaveData(UsableObject usableObject, RackPosition rackPosition)
     {
         var network = EnsureNetworkSaveData();
-        if (network == null || usableObject == null || rackPosition == null) return;
+        if (network is null || !usableObject || !rackPosition) return;
 
         var server = usableObject.GetComponent<Server>();
-        if (server != null)
+        if (server)
         {
             var data = BuildServerSaveData(server, usableObject, rackPosition);
             UpsertServerSaveData(network.servers, data);
             return;
         }
 
+        var router = usableObject.GetComponent<Router>();
+        if (router)
+        {
+            var data = BuildRouterSaveData(router, rackPosition);
+            UpsertRouterSaveData(network.routers, data);
+            return;
+        }
+
+        var firewall = usableObject.GetComponent<Firewall>();
+        if (firewall)
+        {
+            var data = BuildFirewallSaveData(firewall, rackPosition);
+            UpsertFirewallSaveData(network.firewalls, data);
+            return;
+        }
+
         var sw = usableObject.GetComponent<NetworkSwitch>();
-        if (sw != null)
+        if (sw)
         {
             var data = BuildSwitchSaveData(sw, rackPosition);
             UpsertSwitchSaveData(network.switches, data);
@@ -1953,7 +2206,7 @@ internal static class RackPlannerService
         }
 
         var patch = usableObject.GetComponent<PatchPanel>();
-        if (patch != null)
+        if (patch)
         {
             var data = BuildPatchPanelSaveData(patch, rackPosition);
             UpsertPatchPanelSaveData(network.patchPanels, data);
@@ -1987,7 +2240,7 @@ internal static class RackPlannerService
     private static RackPosition ResolveServerSaveRackPosition(Server server, UsableObject usableObject,
         RackPosition currentRackPosition)
     {
-        if (server == null || usableObject == null || currentRackPosition == null || currentRackPosition.rack == null)
+        if (!server || !usableObject || !currentRackPosition || !currentRackPosition.rack)
             return currentRackPosition;
 
         var serverId = server.ServerID ?? string.Empty;
@@ -2004,7 +2257,7 @@ internal static class RackPlannerService
         // multi-U server prefabs on reload. Use the closest RackPosition to the
         // final pasted transform as the save anchor, matching what reseating does.
         var closest = FindClosestRackPosition(currentRackPosition.rack, server.transform.position);
-        if (closest == null)
+        if (!closest)
             return currentRackPosition;
 
         EnsureValidRackPositionUid(closest);
@@ -2013,7 +2266,7 @@ internal static class RackPlannerService
 
     private static RackPosition FindClosestRackPosition(Rack rack, Vector3 worldPosition)
     {
-        if (!rack || rack.positions == null) return null;
+        if (!rack || rack.positions is null) return null;
 
         RackPosition best = null;
         var bestDistance = float.MaxValue;
@@ -2048,8 +2301,140 @@ internal static class RackPlannerService
             timeToBrake = sw.timeToBrake,
             eolTime = sw.eolTime,
             isWarningCleared = sw.isWarningCleared,
-            portVlanFilters = new Il2CppSystem.Collections.Generic.List<PortVlanFilterData>()
+            portVlanFilters = CloneVlanFilters(sw)
         };
+    }
+
+    private static RouterSaveData BuildRouterSaveData(Router router, RackPosition rackPosition)
+    {
+        var tr = router.transform;
+        return new RouterSaveData
+        {
+            switchID = GetSwitchId(router),
+            switchType = router.switchType,
+            position = tr.position,
+            rotation = tr.rotation,
+            rackPositionUID = rackPosition.rackPosGlobalUID,
+            isOn = router.isOn,
+            label = router.labelText ?? string.Empty,
+            isBroken = router.isBroken,
+            timeToBrake = router.timeToBrake,
+            eolTime = router.eolTime,
+            isWarningCleared = router.isWarningCleared,
+            portVlanFilters = CloneVlanFilters(router),
+            asn = router.asn,
+            ownedSubnets = CloneRouterOwnedSubnets(router),
+            routes = CloneRouterRoutes(router),
+            nextRouteId = Math.Max(1, router.nextRouteId)
+        };
+    }
+
+    private static FirewallSaveData BuildFirewallSaveData(Firewall firewall, RackPosition rackPosition)
+    {
+        var tr = firewall.transform;
+        return new FirewallSaveData
+        {
+            switchID = GetSwitchId(firewall),
+            switchType = firewall.switchType,
+            position = tr.position,
+            rotation = tr.rotation,
+            rackPositionUID = rackPosition.rackPosGlobalUID,
+            isOn = firewall.isOn,
+            label = firewall.labelText ?? string.Empty,
+            isBroken = firewall.isBroken,
+            timeToBrake = firewall.timeToBrake,
+            eolTime = firewall.eolTime,
+            isWarningCleared = firewall.isWarningCleared,
+            portVlanFilters = CloneVlanFilters(firewall),
+            filterRules = CloneFirewallRules(firewall),
+            clusterIP = firewall.clusterIP ?? string.Empty
+        };
+    }
+
+    private static Il2CppSystem.Collections.Generic.List<PortVlanFilterData> CloneVlanFilters(NetworkSwitch sw)
+    {
+        var result = new Il2CppSystem.Collections.Generic.List<PortVlanFilterData>();
+        if (!sw || sw.disallowedVlansPerPort is null) return result;
+
+        foreach (var entry in sw.disallowedVlansPerPort)
+        {
+            var vlanIds = new Il2CppSystem.Collections.Generic.List<int>();
+            if (entry.Value is not null)
+            {
+                foreach (var vlanId in entry.Value)
+                    vlanIds.Add(vlanId);
+            }
+
+            result.Add(new PortVlanFilterData
+            {
+                portIndex = entry.Key,
+                disallowedVlanIds = vlanIds
+            });
+        }
+
+        return result;
+    }
+
+    private static Il2CppSystem.Collections.Generic.List<Router.OwnedSubnet> CloneRouterOwnedSubnets(Router router)
+    {
+        var result = new Il2CppSystem.Collections.Generic.List<Router.OwnedSubnet>();
+        if (!router || router.ownedSubnets is null) return result;
+
+        foreach (var subnet in router.ownedSubnets)
+        {
+            if (subnet is null) continue;
+            result.Add(new Router.OwnedSubnet
+            {
+                vlanId = subnet.vlanId,
+                subnetCidr = subnet.subnetCidr ?? string.Empty
+            });
+        }
+
+        return result;
+    }
+
+    private static Il2CppSystem.Collections.Generic.List<Router.RouteEntry> CloneRouterRoutes(Router router)
+    {
+        var result = new Il2CppSystem.Collections.Generic.List<Router.RouteEntry>();
+        if (!router || router.routes is null) return result;
+
+        foreach (var route in router.routes)
+        {
+            if (route is null) continue;
+            result.Add(new Router.RouteEntry
+            {
+                routeId = route.routeId,
+                sourceVlanId = route.sourceVlanId,
+                sourceIp = route.sourceIp ?? string.Empty,
+                targetVlanId = route.targetVlanId,
+                targetIp = route.targetIp ?? string.Empty
+            });
+        }
+
+        return result;
+    }
+
+    private static Il2CppSystem.Collections.Generic.List<Firewall.FilterRule> CloneFirewallRules(Firewall firewall)
+    {
+        var result = new Il2CppSystem.Collections.Generic.List<Firewall.FilterRule>();
+        if (!firewall || firewall.filterRules is null) return result;
+
+        foreach (var rule in firewall.filterRules)
+        {
+            if (rule is null) continue;
+            result.Add(new Firewall.FilterRule
+            {
+                portIndex = rule.portIndex,
+                sourceIpCidr = rule.sourceIpCidr ?? string.Empty,
+                destIpCidr = rule.destIpCidr ?? string.Empty,
+                networkPort = rule.networkPort,
+                protocol = rule.protocol,
+                bidirectional = rule.bidirectional,
+                allow = rule.allow
+            });
+        }
+
+        return result;
     }
 
     private static PatchPanelSaveData BuildPatchPanelSaveData(PatchPanel patch, RackPosition rackPosition)
@@ -2068,11 +2453,11 @@ internal static class RackPlannerService
     private static void UpsertServerSaveData(Il2CppSystem.Collections.Generic.List<ServerSaveData> servers,
         ServerSaveData data)
     {
-        if (servers == null || data == null) return;
+        if (servers is null || data is null) return;
         for (var i = 0; i < servers.Count; i++)
         {
             var existing = servers[i];
-            if (existing == null) continue;
+            if (existing is null) continue;
             if (!string.IsNullOrEmpty(data.serverID) && existing.serverID == data.serverID)
             {
                 servers[i] = data;
@@ -2086,11 +2471,11 @@ internal static class RackPlannerService
     private static void UpsertSwitchSaveData(Il2CppSystem.Collections.Generic.List<SwitchSaveData> switches,
         SwitchSaveData data)
     {
-        if (switches == null || data == null) return;
+        if (switches is null || data is null) return;
         for (var i = 0; i < switches.Count; i++)
         {
             var existing = switches[i];
-            if (existing == null) continue;
+            if (existing is null) continue;
             if (!string.IsNullOrEmpty(data.switchID) && existing.switchID == data.switchID)
             {
                 switches[i] = data;
@@ -2101,14 +2486,50 @@ internal static class RackPlannerService
         switches.Add(data);
     }
 
+    private static void UpsertRouterSaveData(Il2CppSystem.Collections.Generic.List<RouterSaveData> routers,
+        RouterSaveData data)
+    {
+        if (routers is null || data is null) return;
+        for (var i = 0; i < routers.Count; i++)
+        {
+            var existing = routers[i];
+            if (existing is null) continue;
+            if (!string.IsNullOrEmpty(data.switchID) && existing.switchID == data.switchID)
+            {
+                routers[i] = data;
+                return;
+            }
+        }
+
+        routers.Add(data);
+    }
+
+    private static void UpsertFirewallSaveData(Il2CppSystem.Collections.Generic.List<FirewallSaveData> firewalls,
+        FirewallSaveData data)
+    {
+        if (firewalls is null || data is null) return;
+        for (var i = 0; i < firewalls.Count; i++)
+        {
+            var existing = firewalls[i];
+            if (existing is null) continue;
+            if (!string.IsNullOrEmpty(data.switchID) && existing.switchID == data.switchID)
+            {
+                firewalls[i] = data;
+                return;
+            }
+        }
+
+        firewalls.Add(data);
+    }
+
     private static void UpsertPatchPanelSaveData(Il2CppSystem.Collections.Generic.List<PatchPanelSaveData> patchPanels,
         PatchPanelSaveData data)
     {
-        if (patchPanels == null || data == null) return;
+        if (patchPanels is null || data is null) return;
         for (var i = 0; i < patchPanels.Count; i++)
         {
             var existing = patchPanels[i];
-            if (existing == null) continue;
+            if (existing is null) continue;
             if (!string.IsNullOrEmpty(data.patchPanelID) && existing.patchPanelID == data.patchPanelID)
             {
                 patchPanels[i] = data;
@@ -2124,21 +2545,28 @@ internal static class RackPlannerService
     private static GameObject ResolvePrefab(RackDeviceTemplate template)
     {
         var mainGameManager = MainGameManager.instance;
-        if (mainGameManager == null)
+        if (!mainGameManager)
             return null;
 
         return template.Kind switch
         {
-            RackDeviceKind.Server => ResolveFromArray(mainGameManager.serverPrefabs, template.PrefabId),
-            RackDeviceKind.NetworkSwitch => ResolveFromArray(mainGameManager.switchesPrefabs, template.VariantId),
-            RackDeviceKind.PatchPanel => ResolveFromArray(mainGameManager.patchPanelsPrefabs, template.VariantId),
+            RackDeviceKind.Server => mainGameManager.GetServerPrefab(template.ServerType) ??
+                                     ResolveFromArray(mainGameManager.serverPrefabs, template.PrefabId),
+            RackDeviceKind.NetworkSwitch => mainGameManager.GetSwitchPrefab(template.VariantId) ??
+                                            ResolveFromArray(mainGameManager.switchesPrefabs, template.VariantId),
+            RackDeviceKind.Router => mainGameManager.GetRouterPrefab(template.VariantId) ??
+                                     ResolveFromArray(mainGameManager.routersPrefabs, template.VariantId),
+            RackDeviceKind.Firewall => mainGameManager.GetFirewallPrefab(template.VariantId) ??
+                                       ResolveFromArray(mainGameManager.firewallsPrefabs, template.VariantId),
+            RackDeviceKind.PatchPanel => mainGameManager.GetPatchPanelPrefab(template.VariantId) ??
+                                         ResolveFromArray(mainGameManager.patchPanelsPrefabs, template.VariantId),
             _ => null
         };
     }
 
     private static GameObject ResolveFromArray(Il2CppReferenceArray<GameObject> prefabs, int index)
     {
-        if (prefabs == null || index < 0 || index >= prefabs.Count)
+        if (prefabs is null || index < 0 || index >= prefabs.Count)
             return null;
 
         return prefabs[index];
@@ -2152,7 +2580,7 @@ internal static class RackPlannerService
         {
             var sizeU = Math.Max(1, template.SizeInU);
             var anchorPhysicalSlot = ResolveAnchorPhysicalSlot(template.StartIndex, sizeU);
-            if (rack.positions == null || template.StartIndex < 0 || anchorPhysicalSlot >= rack.positions.Count)
+            if (rack.positions is null || template.StartIndex < 0 || anchorPhysicalSlot >= rack.positions.Count)
             {
                 message = $"{template.DisplayName}: invalid target position.";
                 return false;
@@ -2179,14 +2607,14 @@ internal static class RackPlannerService
             }
 
             var rackPosition = GetPositionByPhysicalSlot(rack, anchorPhysicalSlot);
-            if (rackPosition == null)
+            if (!rackPosition)
             {
                 message = $"{template.DisplayName}: RackPosition is missing.";
                 return false;
             }
 
             var prefab = ResolvePrefab(template);
-            if (prefab == null)
+            if (!prefab)
             {
                 message = $"{template.DisplayName}: no matching prefab found.";
                 return false;
@@ -2236,9 +2664,9 @@ internal static class RackPlannerService
                     /* fallback */
                 }
 
-                if (parentTr == null) parentTr = rackPosition.transform;
+                if (!parentTr) parentTr = rackPosition.transform;
                 instance = Object.Instantiate(prefab, parentTr);
-                if (instance == null)
+                if (!instance)
                 {
                     message = $"{template.DisplayName}: prefab instantiation failed.";
                     return false;
@@ -2268,7 +2696,7 @@ internal static class RackPlannerService
             }
 
             var usableObject = instance.GetComponent<UsableObject>();
-            if (usableObject == null)
+            if (!usableObject)
             {
                 Object.Destroy(instance);
                 message = $"{template.DisplayName}: UsableObject component is missing.";
@@ -2332,7 +2760,7 @@ internal static class RackPlannerService
                 case RackDeviceKind.Server:
                 {
                     var server = instance.GetComponent<Server>();
-                    if (server == null)
+                    if (!server)
                         throw new InvalidOperationException("Server component is missing.");
 
                     // Pass null = fresh-insert path. The game initializes a unique
@@ -2426,7 +2854,7 @@ internal static class RackPlannerService
                 case RackDeviceKind.NetworkSwitch:
                 {
                     var networkSwitch = instance.GetComponent<NetworkSwitch>();
-                    if (networkSwitch == null)
+                    if (!networkSwitch)
                         throw new InvalidOperationException("Switch component is missing.");
 
                     networkSwitch.SwitchInsertedInRack(); // fresh-insert path
@@ -2441,15 +2869,66 @@ internal static class RackPlannerService
                         MelonLogger.Warning($"RegisterSwitch failed: {ex.Message}");
                     }
 
+                    RestoreVlanFilters(networkSwitch, template);
                     if (!string.IsNullOrEmpty(template.Label)) networkSwitch.labelText = template.Label;
                     if (networkSwitch.isOn != template.IsPoweredOn)
                         networkSwitch.PowerButton(template.IsPoweredOn);
                     break;
                 }
+                case RackDeviceKind.Router:
+                {
+                    var router = instance.GetComponent<Router>();
+                    if (!router)
+                        throw new InvalidOperationException("Router component is missing.");
+
+                    // Router overrides SwitchInsertedInRack. The null/fresh path
+                    // creates a unique switch ID and initializes base switch state;
+                    // Router-specific configuration is then replayed as one snapshot
+                    // so route withdrawal/reapplication follows vanilla semantics.
+                    router.SwitchInsertedInRack();
+                    try
+                    {
+                        NetworkMap.instance?.RegisterSwitch(router);
+                    }
+                    catch (Exception ex)
+                    {
+                        MelonLogger.Warning($"Register router failed: {ex.Message}");
+                    }
+
+                    RestoreVlanFilters(router, template);
+                    RestoreRouterConfiguration(router, template);
+                    if (!string.IsNullOrEmpty(template.Label)) router.labelText = template.Label;
+                    if (router.isOn != template.IsPoweredOn)
+                        router.PowerButton(template.IsPoweredOn);
+                    break;
+                }
+                case RackDeviceKind.Firewall:
+                {
+                    var firewall = instance.GetComponent<Firewall>();
+                    if (!firewall)
+                        throw new InvalidOperationException("Firewall component is missing.");
+
+                    firewall.InsertedInRack();
+                    try
+                    {
+                        NetworkMap.instance?.RegisterSwitch(firewall);
+                    }
+                    catch (Exception ex)
+                    {
+                        MelonLogger.Warning($"Register firewall failed: {ex.Message}");
+                    }
+
+                    RestoreVlanFilters(firewall, template);
+                    RestoreFirewallConfiguration(firewall, template);
+                    if (!string.IsNullOrEmpty(template.Label)) firewall.labelText = template.Label;
+                    if (firewall.isOn != template.IsPoweredOn)
+                        firewall.PowerButton(template.IsPoweredOn);
+                    break;
+                }
                 case RackDeviceKind.PatchPanel:
                 {
                     var patchPanel = instance.GetComponent<PatchPanel>();
-                    if (patchPanel == null)
+                    if (!patchPanel)
                         throw new InvalidOperationException("PatchPanel component is missing.");
 
                     patchPanel.InsertedInRack(); // fresh-insert path
@@ -2500,7 +2979,7 @@ internal static class RackPlannerService
             {
                 var pivotSlot = template.StartIndex + sizeU - 1;
                 var pivotRackPosition = GetPositionByPhysicalSlot(rack, pivotSlot);
-                if (pivotRackPosition != null)
+                if (pivotRackPosition)
                 {
                     instance.transform.position = pivotRackPosition.transform.position;
                 }
@@ -2527,10 +3006,10 @@ internal static class RackPlannerService
         for (var i = template.StartIndex; i < template.StartIndex + template.SizeInU; i++)
         {
             var slot = occupancy[i];
-            if (slot == null)
+            if (slot is null)
                 continue;
 
-            if (blocking == null)
+            if (blocking is null)
                 blocking = slot;
             else if (!ReferenceEquals(blocking, slot) && !AreEquivalent(blocking, slot))
                 return slot;
@@ -2582,6 +3061,37 @@ internal static class RackPlannerService
             Label = source.Label,
             IsPoweredOn = source.IsPoweredOn,
             ServerType = source.ServerType,
+            PortVlanFilters = (source.PortVlanFilters ?? []).Select(entry => new NetworkPortVlanFilterTemplate
+            {
+                PortIndex = entry.PortIndex,
+                DisallowedVlanIds = [..entry.DisallowedVlanIds ?? []]
+            }).ToList(),
+            RouterAsn = source.RouterAsn,
+            RouterNextRouteId = source.RouterNextRouteId,
+            RouterOwnedSubnets = (source.RouterOwnedSubnets ?? []).Select(subnet => new RouterOwnedSubnetTemplate
+            {
+                VlanId = subnet.VlanId,
+                SubnetCidr = subnet.SubnetCidr
+            }).ToList(),
+            RouterRoutes = (source.RouterRoutes ?? []).Select(route => new RouterRouteTemplate
+            {
+                RouteId = route.RouteId,
+                SourceVlanId = route.SourceVlanId,
+                SourceIp = route.SourceIp,
+                TargetVlanId = route.TargetVlanId,
+                TargetIp = route.TargetIp
+            }).ToList(),
+            FirewallClusterIp = source.FirewallClusterIp,
+            FirewallRules = (source.FirewallRules ?? []).Select(rule => new FirewallRuleTemplate
+            {
+                PortIndex = rule.PortIndex,
+                SourceIpCidr = rule.SourceIpCidr,
+                DestinationIpCidr = rule.DestinationIpCidr,
+                NetworkPort = rule.NetworkPort,
+                Protocol = rule.Protocol,
+                Bidirectional = rule.Bidirectional,
+                Allow = rule.Allow
+            }).ToList(),
             LocalPos = source.LocalPos,
             LocalEuler = source.LocalEuler
         };

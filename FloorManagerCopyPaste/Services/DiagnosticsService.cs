@@ -14,7 +14,7 @@ internal static class DiagnosticsService
         try
         {
             var kb = Keyboard.current;
-            if (kb == null) return;
+            if (kb is null) return;
 
             if (kb.f6Key.wasPressedThisFrame)
             {
