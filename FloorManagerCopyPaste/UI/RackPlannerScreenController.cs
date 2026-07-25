@@ -1024,9 +1024,10 @@ internal sealed class RackPlannerScreenController
         int DeviceSize(RackDeviceTemplate d) =>
             d.Kind == RackDeviceKind.PatchPanel ? Math.Max(2, d.SizeInU) : Math.Max(1, d.SizeInU);
 
-        var totalSlots = 0;
-        foreach (var d in template.Devices)
-            totalSlots = Math.Max(totalSlots, d.StartIndex + DeviceSize(d));
+        var totalSlots = template.TotalSlots;
+        if (totalSlots <= 0)
+            foreach (var d in template.Devices)
+                totalSlots = Math.Max(totalSlots, d.StartIndex + DeviceSize(d));
         if (totalSlots <= 0) totalSlots = 24;
 
         var occ = new RackDeviceTemplate[totalSlots];
