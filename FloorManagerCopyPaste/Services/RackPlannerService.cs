@@ -875,7 +875,8 @@ internal static class RackPlannerService
         if (sw)
         {
             var prefabArrayIndex =
-                FindPrefabArrayIndex(MainGameManager.instance?.switchesPrefabs, usableObject);
+                FindSwitchPrefabArrayIndex(
+                    MainGameManager.instance?.switchesPrefabs, sw.switchType, usableObject);
             template = new RackDeviceTemplate
             {
                 Kind = RackDeviceKind.NetworkSwitch,
@@ -987,6 +988,24 @@ internal static class RackPlannerService
 
         if (sizeMatchCount == 1) return sizeOnlyMatch;
         return idOnlyMatch;
+    }
+
+    /// <summary>
+    /// MainGameManager.GetSwitchPrefab indexes switchesPrefabs directly by
+    /// NetworkSwitch.switchType. Generic prefabID + size matching is ambiguous here:
+    /// the updated game's 1U switches reuse IDs, which made type 3
+    /// (4xQSFP + 16xSFP) capture as array entry/type 1 (4xSFP).
+    /// </summary>
+    private static int FindSwitchPrefabArrayIndex(
+        Il2CppReferenceArray<GameObject> prefabs, int switchType, UsableObject source)
+    {
+        if (prefabs is not null &&
+            switchType >= 0 &&
+            switchType < prefabs.Count &&
+            prefabs[switchType])
+            return switchType;
+
+        return FindPrefabArrayIndex(prefabs, source);
     }
 
     private static List<NetworkPortVlanFilterTemplate> CaptureVlanFilters(NetworkSwitch networkSwitch)
@@ -2676,8 +2695,7 @@ internal static class RackPlannerService
         {
             RackDeviceKind.Server => ResolveExactPrefab(mainGameManager.serverPrefabs, template) ??
                                      mainGameManager.GetServerPrefab(template.ServerType),
-            RackDeviceKind.NetworkSwitch => ResolveExactPrefab(mainGameManager.switchesPrefabs, template) ??
-                                            mainGameManager.GetSwitchPrefab(template.VariantId),
+            RackDeviceKind.NetworkSwitch => ResolveSwitchPrefab(mainGameManager, template),
             RackDeviceKind.Router => ResolveExactPrefab(mainGameManager.routersPrefabs, template) ??
                                      mainGameManager.GetRouterPrefab(template.VariantId),
             RackDeviceKind.Firewall => ResolveExactPrefab(mainGameManager.firewallsPrefabs, template) ??
@@ -2686,6 +2704,18 @@ internal static class RackPlannerService
                                          mainGameManager.GetPatchPanelPrefab(template.VariantId),
             _ => null
         };
+    }
+
+    private static GameObject ResolveSwitchPrefab(
+        MainGameManager mainGameManager, RackDeviceTemplate template)
+    {
+        // switchType is the authoritative identity for vanilla switches:
+        // GetSwitchPrefab(type) directly indexes switchesPrefabs[type]. Prefer it
+        // over legacy PrefabArrayIndex values produced by ambiguous ID/size matching.
+        var typedPrefab = mainGameManager.GetSwitchPrefab(template.VariantId);
+        return typedPrefab
+            ? typedPrefab
+            : ResolveExactPrefab(mainGameManager.switchesPrefabs, template);
     }
 
     /// <summary>
