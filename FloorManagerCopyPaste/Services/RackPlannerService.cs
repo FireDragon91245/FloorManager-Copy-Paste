@@ -209,10 +209,20 @@ internal static class RackPlannerService
     {
         var est = new TemplatePriceEstimate();
         if (template is null) return est;
-        foreach (var d in template.Devices)
+        var sfpPorts = new HashSet<(int deviceIndex, int portIndex)>();
+        for (var deviceIndex = 0; deviceIndex < template.Devices.Count; deviceIndex++)
         {
+            var d = template.Devices[deviceIndex];
             est.DeviceBase += d.BasePrice;
             est.DeviceAdjusted += CalculateAdjustedPrice(d.BasePrice);
+
+            foreach (var module in d.InstalledSfpModules ?? [])
+            {
+                if (module is null || module.PortIndex < 0 || module.SfpType < 0)
+                    continue;
+                if (sfpPorts.Add((deviceIndex, module.PortIndex)))
+                    est.SfpCount++;
+            }
         }
 
         if (template.Cables is not null)
@@ -220,13 +230,27 @@ internal static class RackPlannerService
             foreach (var c in template.Cables)
             {
                 est.CableLength += Mathf.Max(0f, c.Length);
-                est.SfpCount += c.SfpCount;
+                CountLegacyCableModule(c.EndA, c.SfpTypeA);
+                CountLegacyCableModule(c.EndB, c.SfpTypeB);
             }
         }
 
         est.CablePrice = Mathf.CeilToInt(est.CableLength * PricePerCableMeter);
         est.SfpPrice = est.SfpCount * PricePerSfp;
         return est;
+
+        void CountLegacyCableModule(RackCableEndpoint endpoint, int sfpType)
+        {
+            if (sfpType < 0) return;
+            if (endpoint is not null && endpoint.DeviceIndex >= 0 && endpoint.PortIndex >= 0)
+            {
+                if (sfpPorts.Add((endpoint.DeviceIndex, endpoint.PortIndex)))
+                    est.SfpCount++;
+                return;
+            }
+
+            est.SfpCount++;
+        }
     }
 
     public static bool DeleteTemplate(IList<RackTemplate> templates, int index)
@@ -896,7 +920,8 @@ internal static class RackPlannerService
                 LocalRotationY = localRotation.y,
                 LocalRotationZ = localRotation.z,
                 LocalRotationW = localRotation.w,
-                PortVlanFilters = CaptureVlanFilters(sw)
+                PortVlanFilters = CaptureVlanFilters(sw),
+                InstalledSfpModules = CaptureInstalledSfpModules(sw)
             };
             return true;
         }
@@ -1030,6 +1055,70 @@ internal static class RackPlannerService
         }
 
         return result;
+    }
+
+    private static List<RackSfpModuleTemplate> CaptureInstalledSfpModules(NetworkSwitch networkSwitch)
+    {
+        var result = new List<RackSfpModuleTemplate>();
+        var ports = networkSwitch?.cableLinkSwitchPorts;
+        if (ports is null) return result;
+
+        for (var portIndex = 0; portIndex < ports.Count; portIndex++)
+        {
+            var link = ports[portIndex];
+            if (!link) continue;
+
+            SFPModule module = null;
+            try
+            {
+                module = link.insertedSFP;
+            }
+            catch
+            {
+                /* sfpTypeInserted remains a reliable fallback */
+            }
+
+            var sfpType = link.sfpTypeInserted;
+            if (sfpType < 0 && module)
+                sfpType = module.sfpType;
+            if (sfpType < 0 && module)
+                sfpType = module.prefabID;
+            if (sfpType < 0)
+                continue;
+
+            var speed = link.connectionSpeed;
+            if (module && module.speed > 0f)
+                speed = module.speed;
+
+            result.Add(new RackSfpModuleTemplate
+            {
+                PortIndex = portIndex,
+                SfpType = sfpType,
+                Speed = speed
+            });
+        }
+
+        return result;
+    }
+
+    private static void RestoreInstalledSfpModules(
+        NetworkSwitch networkSwitch, RackDeviceTemplate template)
+    {
+        var ports = networkSwitch?.cableLinkSwitchPorts;
+        if (ports is null) return;
+
+        foreach (var installed in template.InstalledSfpModules ?? [])
+        {
+            if (installed is null ||
+                installed.PortIndex < 0 ||
+                installed.PortIndex >= ports.Count ||
+                installed.SfpType < 0)
+                continue;
+
+            var link = ports[installed.PortIndex];
+            if (!link) continue;
+            EnsureSfpInserted(link, installed.SfpType, installed.Speed);
+        }
     }
 
     private static void RestoreVlanFilters(NetworkSwitch networkSwitch, RackDeviceTemplate template)
@@ -1815,6 +1904,39 @@ internal static class RackPlannerService
         catch
         {
             /* fallback */
+        }
+
+        // Device-level module restoration runs before cable restoration. If this port
+        // already owns a module, keep that instance and only synchronize metadata;
+        // reinserting it can detach or duplicate an otherwise valid empty-slot module.
+        if (module)
+        {
+            try
+            {
+                module.prefabID = sfpType;
+                module.sfpType = sfpType;
+                if (speed > 0f) module.speed = speed;
+            }
+            catch
+            {
+                /* best effort */
+            }
+
+            if (speed > 0f)
+            {
+                try
+                {
+                    link.SetConnectionSpeed(speed);
+                }
+                catch
+                {
+                    link.connectionSpeed = speed;
+                }
+            }
+
+            link.sfpTypeInserted = sfpType;
+            AddSfpToCurrentSave(module, link, sfpType);
+            return;
         }
 
         if (!module)
@@ -3082,6 +3204,7 @@ internal static class RackPlannerService
                     }
 
                     RestoreVlanFilters(networkSwitch, template);
+                    RestoreInstalledSfpModules(networkSwitch, template);
                     if (!string.IsNullOrEmpty(template.Label)) networkSwitch.labelText = template.Label;
                     RestoreSwitchPowerState(networkSwitch, template.IsPoweredOn);
                     break;
@@ -3413,6 +3536,12 @@ internal static class RackPlannerService
             {
                 PortIndex = entry.PortIndex,
                 DisallowedVlanIds = [..entry.DisallowedVlanIds ?? []]
+            }).ToList(),
+            InstalledSfpModules = (source.InstalledSfpModules ?? []).Select(module => new RackSfpModuleTemplate
+            {
+                PortIndex = module.PortIndex,
+                SfpType = module.SfpType,
+                Speed = module.Speed
             }).ToList(),
             RouterAsn = source.RouterAsn,
             RouterNextRouteId = source.RouterNextRouteId,

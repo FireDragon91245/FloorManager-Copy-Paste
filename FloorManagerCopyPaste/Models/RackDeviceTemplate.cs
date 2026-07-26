@@ -53,6 +53,12 @@ internal sealed class RackDeviceTemplate
     /// </summary>
     public List<NetworkPortVlanFilterTemplate> PortVlanFilters { get; init; } = [];
 
+    /// <summary>
+    /// SFP/QSFP modules installed in switch ports, including modules with no cable.
+    /// Cable templates retain endpoint module fields only for legacy compatibility.
+    /// </summary>
+    public List<RackSfpModuleTemplate> InstalledSfpModules { get; init; } = [];
+
     public int RouterAsn { get; init; }
     public int RouterNextRouteId { get; init; } = 1;
     public List<RouterOwnedSubnetTemplate> RouterOwnedSubnets { get; init; } = [];
